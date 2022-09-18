@@ -55,160 +55,159 @@ def add(isamAppliance, instance_name, server_hostname, junction_point, junction_
     if force is True or server_exist is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                'instance_name': instance_name,
-                'server_hostname': server_hostname,
-                'junction_point': junction_point,
-                'junction_type': junction_type,
-                'policy': policy,
-                'authentication': authentication
-            }
-            if static_response_headers is not None:
-                json_data['static_response_headers'] = static_response_headers
+        json_data = {
+            'instance_name': instance_name,
+            'server_hostname': server_hostname,
+            'junction_point': junction_point,
+            'junction_type': junction_type,
+            'policy': policy,
+            'authentication': authentication
+        }
+        if static_response_headers is not None:
+            json_data['static_response_headers'] = static_response_headers
 
-            if jwt is not None:
-                json_data['jwt'] = jwt
+        if jwt is not None:
+            json_data['jwt'] = jwt
 
-            if junction_hard_limit is not None:
-                json_data['junction_hard_limit'] = junction_hard_limit
+        if junction_hard_limit is not None:
+            json_data['junction_hard_limit'] = junction_hard_limit
 
-            if junction_soft_limit is not None:
-                json_data['junction_soft_limit'] = junction_soft_limit
+        if junction_soft_limit is not None:
+            json_data['junction_soft_limit'] = junction_soft_limit
 
-            if basic_auth_mode is not None:
-                json_data['basic_auth_mode'] = basic_auth_mode
+        if basic_auth_mode is not None:
+            json_data['basic_auth_mode'] = basic_auth_mode
 
-            if tfim_sso is not None:
-                json_data['tfim_sso'] = tfim_sso
+        if tfim_sso is not None:
+            json_data['tfim_sso'] = tfim_sso
 
-            if remote_http_header is not None:
-                json_data['remote_http_header'] = remote_http_header
+        if remote_http_header is not None:
+            json_data['remote_http_header'] = remote_http_header
 
-            if stateful_junction is not None:
-                json_data['stateful_junction'] = stateful_junction
+        if stateful_junction is not None:
+            json_data['stateful_junction'] = stateful_junction
 
-            if http2_junction is not None:
-                json_data['http2_junction']
+        if http2_junction is not None:
+            json_data['http2_junction']
 
-            if http2_proxy is not None:
-                json_data['http2_proxy'] = http2_proxy
+        if http2_proxy is not None:
+            json_data['http2_proxy'] = http2_proxy
 
-            if sni_name is not None:
-                json_data['sni_name'] = sni_name
+        if sni_name is not None:
+            json_data['sni_name'] = sni_name
 
-            if preserve_cookie is not None:
-                json_data['preserve_cookie'] = preserve_cookie
+        if preserve_cookie is not None:
+            json_data['preserve_cookie'] = preserve_cookie
 
-            if cookie_include_path is not None:
-                json_data['cookie_include_path'] = cookie_include_path
+        if cookie_include_path is not None:
+            json_data['cookie_include_path'] = cookie_include_path
 
-            if transparent_path_junction is not None:
-                json_data['transparent_path_junction'] = transparent_path_junction
+        if transparent_path_junction is not None:
+            json_data['transparent_path_junction'] = transparent_path_junction
 
-            if mutual_auth is not None:
-                json_data['mutual_auth'] = mutual_auth
+        if mutual_auth is not None:
+            json_data['mutual_auth'] = mutual_auth
 
-            if insert_ltpa_cookies is not None:
-                json_data['insert_ltpa_cookies'] = insert_ltpa_cookies
+        if insert_ltpa_cookies is not None:
+            json_data['insert_ltpa_cookies'] = insert_ltpa_cookies
 
-            if insert_session_cookies is not None:
-                json_data['insert_session_cookies'] = insert_session_cookies
+        if insert_session_cookies is not None:
+            json_data['insert_session_cookies'] = insert_session_cookies
 
-            if request_encoding is not None:
-                json_data['request_encoding'] = request_encoding
+        if request_encoding is not None:
+            json_data['request_encoding'] = request_encoding
 
-            if enable_basic_auth is not None:
-                json_data['enable_basic_auth'] = enable_basic_auth
+        if enable_basic_auth is not None:
+            json_data['enable_basic_auth'] = enable_basic_auth
 
-            if key_label is not None:
-                json_data['key_label'] = key_label
+        if key_label is not None:
+            json_data['key_label'] = key_label
 
-            if gso_resource_group is not None:
-                json_data['gso_resource_group'] = gso_resource_group
+        if gso_resource_group is not None:
+            json_data['gso_resource_group'] = gso_resource_group
 
-            if junction_cookie_javascript_block is not None:
-                json_data['junction_cookie_javascript_block'] = junction_cookie_javascript_block
+        if junction_cookie_javascript_block is not None:
+            json_data['junction_cookie_javascript_block'] = junction_cookie_javascript_block
 
-            if client_ip_http is not None:
-                json_data['client_ip_http'] = client_ip_http
+        if client_ip_http is not None:
+            json_data['client_ip_http'] = client_ip_http
 
-            if version_two_cookies is not None:
-                json_data['version_two_cookies'] = version_two_cookies
+        if version_two_cookies is not None:
+            json_data['version_two_cookies'] = version_two_cookies
 
-            if ltpa_keyfile is not None:
-                json_data[ltpa_keyfile] = ltpa_keyfile
+        if ltpa_keyfile is not None:
+            json_data[ltpa_keyfile] = ltpa_keyfile
 
-            if authz_rules is not None:
-                json_data['authz_rules'] = authz_rules
+        if authz_rules is not None:
+            json_data['authz_rules'] = authz_rules
 
-            if fsso_config_file is not None:
-                json_data['fsso_config_file'] = fsso_config_file
+        if fsso_config_file is not None:
+            json_data['fsso_config_file'] = fsso_config_file
 
-            if username is not None:
-                json_data['username'] = username
+        if username is not None:
+            json_data['username'] = username
 
-            if password is not None:
-                json_data['password'] = password
+        if password is not None:
+            json_data['password'] = password
 
-            if server_uuid is not None:
-                json_data['server_uuid'] = server_uuid
+        if server_uuid is not None:
+            json_data['server_uuid'] = server_uuid
 
-            if server_port is not None:
-                json_data['server_port'] = server_port
+        if server_port is not None:
+            json_data['server_port'] = server_port
 
-            if virtual_hostname is not None:
-                json_data['virtual_hostname'] = virtual_hostname
+        if virtual_hostname is not None:
+            json_data['virtual_hostname'] = virtual_hostname
 
-            if server_dn is not None:
-                json_data['server_dn'] = server_dn
+        if server_dn is not None:
+            json_data['server_dn'] = server_dn
 
-            if local_ip is not None:
-                json_data['local_ip'] = local_ip
+        if local_ip is not None:
+            json_data['local_ip'] = local_ip
 
-            if query_contents is not None:
-                json_data['query_contents'] = query_contents
+        if query_contents is not None:
+            json_data['query_contents'] = query_contents
 
-            if case_sensitive_url is not None:
-                json_data['case_sensitive_url'] = case_sensitive_url
+        if case_sensitive_url is not None:
+            json_data['case_sensitive_url'] = case_sensitive_url
 
-            if windows_style_url is not None:
-                json_data['windows_style_url'] = windows_style_url
+        if windows_style_url is not None:
+            json_data['windows_style_url'] = windows_style_url
 
-            if ltpa_keyfile_password is not None:
-                json_data['ltpa_keyfile_password'] = ltpa_keyfile_password
+        if ltpa_keyfile_password is not None:
+            json_data['ltpa_keyfile_password'] = ltpa_keyfile_password
 
-            if https_port is not None:
-                json_data['https_port'] = https_port
+        if https_port is not None:
+            json_data['https_port'] = https_port
 
-            if http_port is not None:
-                json_data['http_port'] = http_port
+        if http_port is not None:
+            json_data['http_port'] = http_port
 
-            if proxy_hostname is not None:
-                json_data['proxy_hostname'] = proxy_hostname
+        if proxy_hostname is not None:
+            json_data['proxy_hostname'] = proxy_hostname
 
-            if proxy_port is not None:
-                json_data['proxy_port'] = proxy_port
+        if proxy_port is not None:
+            json_data['proxy_port'] = proxy_port
 
-            if sms_environment is not None:
-                json_data['sms_environment'] = sms_environment
+        if sms_environment is not None:
+            json_data['sms_environment'] = sms_environment
 
-            if vhost_label is not None:
-                json_data['vhost_label'] = vhost_label
+        if vhost_label is not None:
+            json_data['vhost_label'] = vhost_label
 
-            if junction_force is not None:
-                json_data['force'] = junction_force
+        if junction_force is not None:
+            json_data['force'] = junction_force
 
-            if delegation_support is not None:
-                json_data['delegation_support'] = delegation_support
+        if delegation_support is not None:
+            json_data['delegation_support'] = delegation_support
 
-            if scripting_support is not None:
-                json_data['scripting_support'] = scripting_support
+        if scripting_support is not None:
+            json_data['scripting_support'] = scripting_support
 
-            return isamAppliance.invoke_post(
-                "Creating a new API Access Control Resource Server",
-                "{0}/{1}/server".format(uri, instance_name),
-                json_data, requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_post(
+            "Creating a new API Access Control Resource Server",
+            "{0}/{1}/server".format(uri, instance_name),
+            json_data, requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -287,160 +286,159 @@ def update(isamAppliance, instance_name, junction_point, server_hostname, juncti
     if force is True or update_required is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                'instance_name': instance_name,
-                'server_hostname': server_hostname,
-                'junction_point': junction_point,
-                'junction_type': junction_type,
-                'policy': policy,
-                'authentication': authentication
-            }
-            if static_response_headers is not None:
-                json_data['static_response_headers'] = static_response_headers
+        json_data = {
+            'instance_name': instance_name,
+            'server_hostname': server_hostname,
+            'junction_point': junction_point,
+            'junction_type': junction_type,
+            'policy': policy,
+            'authentication': authentication
+        }
+        if static_response_headers is not None:
+            json_data['static_response_headers'] = static_response_headers
 
-            if jwt is not None:
-                json_data['jwt'] = jwt
+        if jwt is not None:
+            json_data['jwt'] = jwt
 
-            if junction_hard_limit is not None:
-                json_data['junction_hard_limit'] = junction_hard_limit
+        if junction_hard_limit is not None:
+            json_data['junction_hard_limit'] = junction_hard_limit
 
-            if junction_soft_limit is not None:
-                json_data['junction_soft_limit'] = junction_soft_limit
+        if junction_soft_limit is not None:
+            json_data['junction_soft_limit'] = junction_soft_limit
 
-            if basic_auth_mode is not None:
-                json_data['basic_auth_mode'] = basic_auth_mode
+        if basic_auth_mode is not None:
+            json_data['basic_auth_mode'] = basic_auth_mode
 
-            if tfim_sso is not None:
-                json_data['tfim_sso'] = tfim_sso
+        if tfim_sso is not None:
+            json_data['tfim_sso'] = tfim_sso
 
-            if remote_http_header is not None:
-                json_data['remote_http_header'] = remote_http_header
+        if remote_http_header is not None:
+            json_data['remote_http_header'] = remote_http_header
 
-            if stateful_junction is not None:
-                json_data['stateful_junction'] = stateful_junction
+        if stateful_junction is not None:
+            json_data['stateful_junction'] = stateful_junction
 
-            if http2_junction is not None:
-                json_data['http2_junction']
+        if http2_junction is not None:
+            json_data['http2_junction']
 
-            if http2_proxy is not None:
-                json_data['http2_proxy'] = http2_proxy
+        if http2_proxy is not None:
+            json_data['http2_proxy'] = http2_proxy
 
-            if sni_name is not None:
-                json_data['sni_name'] = sni_name
+        if sni_name is not None:
+            json_data['sni_name'] = sni_name
 
-            if preserve_cookie is not None:
-                json_data['preserve_cookie'] = preserve_cookie
+        if preserve_cookie is not None:
+            json_data['preserve_cookie'] = preserve_cookie
 
-            if cookie_include_path is not None:
-                json_data['cookie_include_path'] = cookie_include_path
+        if cookie_include_path is not None:
+            json_data['cookie_include_path'] = cookie_include_path
 
-            if transparent_path_junction is not None:
-                json_data['transparent_path_junction'] = transparent_path_junction
+        if transparent_path_junction is not None:
+            json_data['transparent_path_junction'] = transparent_path_junction
 
-            if mutual_auth is not None:
-                json_data['mutual_auth'] = mutual_auth
+        if mutual_auth is not None:
+            json_data['mutual_auth'] = mutual_auth
 
-            if insert_ltpa_cookies is not None:
-                json_data['insert_ltpa_cookies'] = insert_ltpa_cookies
+        if insert_ltpa_cookies is not None:
+            json_data['insert_ltpa_cookies'] = insert_ltpa_cookies
 
-            if insert_session_cookies is not None:
-                json_data['insert_session_cookies'] = insert_session_cookies
+        if insert_session_cookies is not None:
+            json_data['insert_session_cookies'] = insert_session_cookies
 
-            if request_encoding is not None:
-                json_data['request_encoding'] = request_encoding
+        if request_encoding is not None:
+            json_data['request_encoding'] = request_encoding
 
-            if enable_basic_auth is not None:
-                json_data['enable_basic_auth'] = enable_basic_auth
+        if enable_basic_auth is not None:
+            json_data['enable_basic_auth'] = enable_basic_auth
 
-            if key_label is not None:
-                json_data['key_label'] = key_label
+        if key_label is not None:
+            json_data['key_label'] = key_label
 
-            if gso_resource_group is not None:
-                json_data['gso_resource_group'] = gso_resource_group
+        if gso_resource_group is not None:
+            json_data['gso_resource_group'] = gso_resource_group
 
-            if junction_cookie_javascript_block is not None:
-                json_data['junction_cookie_javascript_block'] = junction_cookie_javascript_block
+        if junction_cookie_javascript_block is not None:
+            json_data['junction_cookie_javascript_block'] = junction_cookie_javascript_block
 
-            if client_ip_http is not None:
-                json_data['client_ip_http'] = client_ip_http
+        if client_ip_http is not None:
+            json_data['client_ip_http'] = client_ip_http
 
-            if version_two_cookies is not None:
-                json_data['version_two_cookies'] = version_two_cookies
+        if version_two_cookies is not None:
+            json_data['version_two_cookies'] = version_two_cookies
 
-            if ltpa_keyfile is not None:
-                json_data[ltpa_keyfile] = ltpa_keyfile
+        if ltpa_keyfile is not None:
+            json_data[ltpa_keyfile] = ltpa_keyfile
 
-            if authz_rules is not None:
-                json_data['authz_rules'] = authz_rules
+        if authz_rules is not None:
+            json_data['authz_rules'] = authz_rules
 
-            if fsso_config_file is not None:
-                json_data['fsso_config_file'] = fsso_config_file
+        if fsso_config_file is not None:
+            json_data['fsso_config_file'] = fsso_config_file
 
-            if username is not None:
-                json_data['username'] = username
+        if username is not None:
+            json_data['username'] = username
 
-            if password is not None:
-                json_data['password'] = password
+        if password is not None:
+            json_data['password'] = password
 
-            if server_uuid is not None:
-                json_data['server_uuid'] = server_uuid
+        if server_uuid is not None:
+            json_data['server_uuid'] = server_uuid
 
-            if server_port is not None:
-                json_data['server_port'] = server_port
+        if server_port is not None:
+            json_data['server_port'] = server_port
 
-            if virtual_hostname is not None:
-                json_data['virtual_hostname'] = virtual_hostname
+        if virtual_hostname is not None:
+            json_data['virtual_hostname'] = virtual_hostname
 
-            if server_dn is not None:
-                json_data['server_dn'] = server_dn
+        if server_dn is not None:
+            json_data['server_dn'] = server_dn
 
-            if local_ip is not None:
-                json_data['local_ip'] = local_ip
+        if local_ip is not None:
+            json_data['local_ip'] = local_ip
 
-            if query_contents is not None:
-                json_data['query_contents'] = query_contents
+        if query_contents is not None:
+            json_data['query_contents'] = query_contents
 
-            if case_sensitive_url is not None:
-                json_data['case_sensitive_url'] = case_sensitive_url
+        if case_sensitive_url is not None:
+            json_data['case_sensitive_url'] = case_sensitive_url
 
-            if windows_style_url is not None:
-                json_data['windows_style_url'] = windows_style_url
+        if windows_style_url is not None:
+            json_data['windows_style_url'] = windows_style_url
 
-            if ltpa_keyfile_password is not None:
-                json_data['ltpa_keyfile_password'] = ltpa_keyfile_password
+        if ltpa_keyfile_password is not None:
+            json_data['ltpa_keyfile_password'] = ltpa_keyfile_password
 
-            if https_port is not None:
-                json_data['https_port'] = https_port
+        if https_port is not None:
+            json_data['https_port'] = https_port
 
-            if http_port is not None:
-                json_data['http_port'] = http_port
+        if http_port is not None:
+            json_data['http_port'] = http_port
 
-            if proxy_hostname is not None:
-                json_data['proxy_hostname'] = proxy_hostname
+        if proxy_hostname is not None:
+            json_data['proxy_hostname'] = proxy_hostname
 
-            if proxy_port is not None:
-                json_data['proxy_port'] = proxy_port
+        if proxy_port is not None:
+            json_data['proxy_port'] = proxy_port
 
-            if sms_environment is not None:
-                json_data['sms_environment'] = sms_environment
+        if sms_environment is not None:
+            json_data['sms_environment'] = sms_environment
 
-            if vhost_label is not None:
-                json_data['vhost_label'] = vhost_label
+        if vhost_label is not None:
+            json_data['vhost_label'] = vhost_label
 
-            if junction_force is not None:
-                json_data['force'] = junction_force
+        if junction_force is not None:
+            json_data['force'] = junction_force
 
-            if delegation_support is not None:
-                json_data['delegation_support'] = delegation_support
+        if delegation_support is not None:
+            json_data['delegation_support'] = delegation_support
 
-            if scripting_support is not None:
-                json_data['scripting_support'] = scripting_support
+        if scripting_support is not None:
+            json_data['scripting_support'] = scripting_support
 
-            return isamAppliance.invoke_put(
-                "Updating an existing API Access Control Resource Server",
-                "{0}/{1}/server{2}?{3}".format(uri, instance_name, junction_point, server_type),
-                json_data, requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_put(
+            "Updating an existing API Access Control Resource Server",
+            "{0}/{1}/server{2}?{3}".format(uri, instance_name, junction_point, server_type),
+            json_data, requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -523,13 +521,12 @@ def delete(isamAppliance, instance_name, resource_server_name, server_type='stan
     if force is True or server_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server{2}?server_type={3}".format(uri, instance_name, resource_server_name, server_type)
-            return isamAppliance.invoke_delete(
-                "Delete an existing API Access Control Resource Server",
-                url,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = "{0}/{1}/server{2}?server_type={3}".format(uri, instance_name, resource_server_name, server_type)
+        return isamAppliance.invoke_delete(
+            "Delete an existing API Access Control Resource Server",
+            url,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -583,13 +580,12 @@ def delete_all(isamAppliance, instance_name, check_mode=False, force=False):
     if force is True or all_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server".format(uri, instance_name)
-            return isamAppliance.invoke_delete(
-                "Delete all existing API Access Control Resource Servers",
-                url,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = "{0}/{1}/server".format(uri, instance_name)
+        return isamAppliance.invoke_delete(
+            "Delete all existing API Access Control Resource Servers",
+            url,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -609,14 +605,13 @@ def export_all(isamAppliance, instance_name, file_path, check_mode=False, force=
     if force is True or instance_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server?export=true".format(uri, instance_name)
-            return isamAppliance.invoke_get_file(
-                "Exporting all existing API Access Control Resource Servers",
-                url,
-                file_path,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = "{0}/{1}/server?export=true".format(uri, instance_name)
+        return isamAppliance.invoke_get_file(
+            "Exporting all existing API Access Control Resource Servers",
+            url,
+            file_path,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -644,14 +639,13 @@ def export_file(isamAppliance, instance_name, resource_server_name, file_path, c
     if force is True or server_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server{2}?export=true".format(uri, instance_name, resource_server_name)
-            return isamAppliance.invoke_get_file(
-                "Exporting an existing API Access Control Resource Server",
-                url,
-                file_path,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = "{0}/{1}/server{2}?export=true".format(uri, instance_name, resource_server_name)
+        return isamAppliance.invoke_get_file(
+            "Exporting an existing API Access Control Resource Server",
+            url,
+            file_path,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -666,48 +660,46 @@ def import_file(isamAppliance, instance_name, filename, check_mode=False, force=
         return isamAppliance.create_return_object(warnings=warnings)
 
     instance_exist, warnings = _check_instance_exist(isamAppliance, instance_name)
-    if force is False:
-        if instance_exist is False:
-            warnings.append("{0} does not exist".format(instance_name))
-            return isamAppliance.create_return_object(warnings=warnings)
+    if force is False and instance_exist is False:
+        warnings.append("{0} does not exist".format(instance_name))
+        return isamAppliance.create_return_object(warnings=warnings)
 
     if force is True or instance_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server".format(uri, instance_name)
+        url = "{0}/{1}/server".format(uri, instance_name)
 
-            return isamAppliance.invoke_post_files(
-                "Importing an API Access Control Resource Server(s)", url,
-                [
-                    {
-                        'file_formfield': 'config_file',
-                        'filename': filename,
-                        'mimetype': 'application/octet-stream'
-                    }
-                ],
-                {}, requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_post_files(
+            "Importing an API Access Control Resource Server(s)", url,
+            [
+                {
+                    'file_formfield': 'config_file',
+                    'filename': filename,
+                    'mimetype': 'application/octet-stream'
+                }
+            ],
+            {}, requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _check_server_exist(isamAppliance, instance_name, junction_point):
     ret_obj = get_all(isamAppliance, instance_name)
-    for obj in ret_obj['data']:
-        if obj['name'] == junction_point:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == junction_point
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check_all_servers(isamAppliance, instance_name):
     ret_obj = get_all(isamAppliance, instance_name)
     warnings = ret_obj['warnings']
 
-    if ret_obj['data'] != []:
-        return True, warnings
-    else:
-        return False, warnings
+    return (True, warnings) if ret_obj['data'] != [] else (False, warnings)
 
 
 def _check_list_servers(isamAppliance, instance_name, resource_servers):
@@ -716,18 +708,12 @@ def _check_list_servers(isamAppliance, instance_name, resource_servers):
     non_exist = False
 
     for server in resource_servers:
-        found = False
-        for obj in ret_obj['data']:
-            if obj['name'] == server:
-                found = True
-        if found is False:
+        found = any(obj['name'] == server for obj in ret_obj['data'])
+        if not found:
             non_exist = True
             warnings.append("Did not find resource server {0}".format(server))
 
-    if non_exist is False:
-        return True, ret_obj['warnings']
-    else:
-        return False, warnings
+    return (True, ret_obj['warnings']) if non_exist is False else (False, warnings)
 
 
 def _check_server_content(isamAppliance, instance_name, junction_point, server_hostname, junction_type, policy,

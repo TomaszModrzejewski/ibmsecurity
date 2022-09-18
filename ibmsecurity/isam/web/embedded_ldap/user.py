@@ -37,20 +37,19 @@ def add(isamAppliance, id, password, groups=None, check_mode=False, force=False)
     if force is True or _check(isamAppliance, id) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "id": id,
-                "password": password
-            }
-            if groups is not None:
-                if isinstance(groups, basestring):
-                    import ast
-                    groups = ast.literal_eval(groups)
-                json_data['groups'] = groups
-            return isamAppliance.invoke_post(
-                "Creating a new user in the registry",
-                "{0}/v1".format(uri), json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        json_data = {
+            "id": id,
+            "password": password
+        }
+        if groups is not None:
+            if isinstance(groups, basestring):
+                import ast
+                groups = ast.literal_eval(groups)
+            json_data['groups'] = groups
+        return isamAppliance.invoke_post(
+            "Creating a new user in the registry",
+            "{0}/v1".format(uri), json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -93,11 +92,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

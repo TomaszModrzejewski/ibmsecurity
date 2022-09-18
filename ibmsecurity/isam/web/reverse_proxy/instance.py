@@ -175,14 +175,20 @@ def execute_multiples(isamAppliance, instances, operation, check_mode=False, for
     new_instances = []
 
     for instance in instances:
-        for rp in ret_obj['data']:
-            if rp['id'] == instance['instance_name']:
-                if ((rp['restart'] == "true" and operation == "restart") or
-                        (rp['started'] == 'yes' and operation == "stop") or
-                        (rp['started'] == 'no' and operation == "start")):
-                    new_instances.append(instance)
+        new_instances.extend(
+            instance
+            for rp in ret_obj['data']
+            if rp['id'] == instance['instance_name']
+            and (
+                (
+                    (rp['restart'] == "true" and operation == "restart")
+                    or (rp['started'] == 'yes' and operation == "stop")
+                    or (rp['started'] == 'no' and operation == "start")
+                )
+            )
+        )
 
-    if force is True or len(new_instances) >= 1:
+    if force is True or new_instances:
 
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)

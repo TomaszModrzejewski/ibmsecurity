@@ -33,7 +33,7 @@ def _find_forwarder(ret_obj, server, port, protocol):
     for obj in ret_obj['data']:
         if obj['server'] == server and obj['port'] == port and obj['protocol'] == protocol:
             existing_forwarder = obj
-            logger.debug("Found Forwarder: {0}".format(obj))
+            logger.debug("Found Forwarder: {0}".format(existing_forwarder))
             break
         i += 1
 
@@ -52,8 +52,11 @@ def get(isamAppliance, server, port, protocol, check_mode=False, force=False):
     return_obj = isamAppliance.create_return_object()
     return_obj['data'], i = _find_forwarder(ret_obj, server, port, protocol)
     warnings = []
-    if return_obj['data'] == None:
-        warnings.append("No entry found for server {} port {} and protocol {}.".format(server, port, protocol))
+    if return_obj['data'] is None:
+        warnings.append(
+            f"No entry found for server {server} port {port} and protocol {protocol}."
+        )
+
         return_obj['warnings'] = warnings
 
     return return_obj
@@ -74,9 +77,8 @@ def delete(isamAppliance, server, port, protocol, check_mode=False, force=False)
     if existing_forwarder is not None:
         if check_mode:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            del json_to_post[i]
-            return _update_forwarder_policy(isamAppliance, json_to_post)
+        del json_to_post[i]
+        return _update_forwarder_policy(isamAppliance, json_to_post)
 
     return isamAppliance.create_return_object()
 

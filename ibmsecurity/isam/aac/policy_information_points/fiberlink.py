@@ -75,21 +75,20 @@ def update(isamAppliance, name, properties, attributes=None, description=None, t
         warnings = ["PIP '{0}' does not exists.  Skipping update.".format(name)]
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or update_required is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-
-        else:
-
-            return isamAppliance.invoke_put(
+    if force is True or update_required:
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_put(
                 "Update a specific FiberLink MaaS360 policy information point",
                 "{0}/{1}".format(uri, id),
                 json_data,
-                requires_modules=requires_modules, requires_version=requires_version
+                requires_modules=requires_modules,
+                requires_version=requires_version,
             )
+        )
 
-    if update_required is False:
-        logger.info("Input is the same as current PIP '{0}'.  Skipping update.".format(name))
+    logger.info("Input is the same as current PIP '{0}'.  Skipping update.".format(name))
 
     return isamAppliance.create_return_object()
 

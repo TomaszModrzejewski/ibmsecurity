@@ -77,9 +77,8 @@ def delete(isamAppliance, server, port, protocol, name, check_mode=False, force=
     if existing_forwarder is not None and existing_forwarder_source is not None:
         if check_mode:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            del json_to_post[i]['sources'][j]
-            return forwarder._update_forwarder_policy(isamAppliance, json_to_post)
+        del json_to_post[i]['sources'][j]
+        return forwarder._update_forwarder_policy(isamAppliance, json_to_post)
 
     return isamAppliance.create_return_object()
 
@@ -105,22 +104,21 @@ def set(isamAppliance, server, port, protocol, name, tag, facility, severity, ch
     warnings = []
     update_required = False
     if existing_forwarder is None:
-        warnings.append("Unable to find forwarder for {} {} {}".format(server, port, protocol))
+        warnings.append(f"Unable to find forwarder for {server} {port} {protocol}")
+    elif existing_forwarder_source is None:
+        json_to_post = ret_obj['data']
+        json_to_post[i]['sources'].append(json_data)
+        update_required = True
     else:
-        if existing_forwarder_source is None:
+        sorted_json_data = tools.json_sort(json_data)
+        logger.debug("Sorted input: {0}".format(sorted_json_data))
+        sorted_ret_obj = tools.json_sort(existing_forwarder_source)
+        logger.debug("Sorted existing data: {0}".format(sorted_ret_obj))
+        if sorted_ret_obj != sorted_json_data:
+            logger.info("Changes detected, update needed.")
+            ret_obj['data'][i]['sources'][j] = json_data
             json_to_post = ret_obj['data']
-            json_to_post[i]['sources'].append(json_data)
             update_required = True
-        else:
-            sorted_json_data = tools.json_sort(json_data)
-            logger.debug("Sorted input: {0}".format(sorted_json_data))
-            sorted_ret_obj = tools.json_sort(existing_forwarder_source)
-            logger.debug("Sorted existing data: {0}".format(sorted_ret_obj))
-            if sorted_ret_obj != sorted_json_data:
-                logger.info("Changes detected, update needed.")
-                ret_obj['data'][i]['sources'][j] = json_data
-                json_to_post = ret_obj['data']
-                update_required = True
 
     if update_required:
         if check_mode:

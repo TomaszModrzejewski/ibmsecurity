@@ -68,20 +68,19 @@ def test(isamAppliance, username, passcode, check_mode=False, force=False):
 
     if srv_cfg_available is False:
         return isamAppliance.create_return_object(warnings=["Valid configuration not found, test skipped."])
-    else:
-        ret_obj = isamAppliance.invoke_post("Test RSA Configuration with username/passcode", "{0}/test".format(uri),
-                                            {
-                                                'username': username,
-                                                'passcode': passcode
-                                            },
-                                            requires_modules=requires_modules,
-                                            requires_version=requires_version,
-                                            ignore_error=True,
-                                            requires_model=requires_model)
-        if ret_obj['changed'] is True:
-            ret_obj['changed'] = False
+    ret_obj = isamAppliance.invoke_post("Test RSA Configuration with username/passcode", "{0}/test".format(uri),
+                                        {
+                                            'username': username,
+                                            'passcode': passcode
+                                        },
+                                        requires_modules=requires_modules,
+                                        requires_version=requires_version,
+                                        ignore_error=True,
+                                        requires_model=requires_model)
+    if ret_obj['changed'] is True:
+        ret_obj['changed'] = False
 
-        return ret_obj
+    return ret_obj
 
 
 def delete(isamAppliance, check_mode=False, force=False):

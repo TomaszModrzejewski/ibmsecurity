@@ -38,28 +38,27 @@ def add(isamAppliance, name, max_pooled_connections=50, idle_timeout=10, connect
     if force is True or exist is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "max-pooled-connections": max_pooled_connections,
-                "idle-timeout": idle_timeout,
-                "connect-timeout": connect_timeout,
-                "io-timeout": io_timeout,
-                "health-check-interval": health_check_interval,
-                "servers": servers
-            }
+        json_data = {
+            "name": name,
+            "max-pooled-connections": max_pooled_connections,
+            "idle-timeout": idle_timeout,
+            "connect-timeout": connect_timeout,
+            "io-timeout": io_timeout,
+            "health-check-interval": health_check_interval,
+            "servers": servers
+        }
 
-            if matching_hosts != None:
-                json_data['matching-hosts'] = matching_hosts
+        if matching_hosts != None:
+            json_data['matching-hosts'] = matching_hosts
 
-            if cross_domain_support != None:
-                json_data['cross-domain-support'] = cross_domain_support
+        if cross_domain_support != None:
+            json_data['cross-domain-support'] = cross_domain_support
 
-            return isamAppliance.invoke_post(
-                "Create the configuration for a new collection of Redis servers",
-                "{0}".format(uri),
-                json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_post(
+            "Create the configuration for a new collection of Redis servers",
+            "{0}".format(uri),
+            json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -86,14 +85,13 @@ def update(isamAppliance, name, max_pooled_connections=50, idle_timeout=10, conn
     if force is True or same_contents is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if 'servers' not in json_data:
-                json_data['servers'] = []
-            return isamAppliance.invoke_put(
-                "Update the configuration of a collection of Redis servers",
-                "{0}/{1}".format(uri, name),
-                json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        if 'servers' not in json_data:
+            json_data['servers'] = []
+        return isamAppliance.invoke_put(
+            "Update the configuration of a collection of Redis servers",
+            "{0}/{1}".format(uri, name),
+            json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -108,14 +106,13 @@ def set(isamAppliance, name, max_pooled_connections=50, idle_timeout=10, connect
                       health_check_interval=health_check_interval, servers=servers,
                       cross_domain_support=cross_domain_support, matching_hosts=matching_hosts, check_mode=check_mode,
                       force=force)
-    else:
-        if servers is None:
-            servers = []
-        return add(isamAppliance=isamAppliance, name=name, max_pooled_connections=max_pooled_connections,
-                   idle_timeout=idle_timeout, connect_timeout=connect_timeout, io_timeout=io_timeout,
-                   health_check_interval=health_check_interval, servers=servers,
-                   cross_domain_support=cross_domain_support, matching_hosts=matching_hosts, check_mode=check_mode,
-                   force=force)
+    if servers is None:
+        servers = []
+    return add(isamAppliance=isamAppliance, name=name, max_pooled_connections=max_pooled_connections,
+               idle_timeout=idle_timeout, connect_timeout=connect_timeout, io_timeout=io_timeout,
+               health_check_interval=health_check_interval, servers=servers,
+               cross_domain_support=cross_domain_support, matching_hosts=matching_hosts, check_mode=check_mode,
+               force=force)
 
 
 def delete(isamAppliance, name, check_mode=False, force=False):
@@ -139,11 +136,14 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 def _check_exist(isamAppliance, name):
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['name'] == name:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == name
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check_contents(isamAppliance, name, max_pooled_connections, idle_timeout, connect_timeout, io_timeout,
@@ -174,11 +174,10 @@ def _check_contents(isamAppliance, name, max_pooled_connections, idle_timeout, c
     sorted_obj2 = tools.json_sort(current_content)
     logger.debug("Sorted sorted_obj2: {0}".format(sorted_obj2))
 
-    if sorted_obj1 != sorted_obj2:
-        logger.info("Changes detected, update needed.")
-        return False, warnings, json_data
-    else:
+    if sorted_obj1 == sorted_obj2:
         return True, warnings, json_data
+    logger.info("Changes detected, update needed.")
+    return False, warnings, json_data
 
 
 def compare(isamAppliance1, isamAppliance2):

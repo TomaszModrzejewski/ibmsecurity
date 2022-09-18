@@ -22,15 +22,18 @@ def get(isamAppliance, description, check_mode=False, force=False):
     """
     Retrieve a specific attribute matcher
     """
-    warnings = []
     ret_obj = search(isamAppliance, description=description, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings.append("Attribute Matcher {0} had no match, skipping retrieval.".format(description))
-        return isamAppliance.create_return_object(changed=False, warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    warnings = [
+        "Attribute Matcher {0} had no match, skipping retrieval.".format(
+            description
+        )
+    ]
+
+    return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
 
 def _get(isamAppliance, id):
@@ -65,7 +68,7 @@ def set(isamAppliance, description, properties, predefined=True, supportedDataty
         warnings.append("Attribute Matcher {0} had no match, Add is not supported.".format(description))
         return isamAppliance.create_return_object(changed=False, warnings=warnings)
     else:
-        if (description == "Exact attribute matcher" or description == "JavascriptPIPMatcher"):
+        if description in ["Exact attribute matcher", "JavascriptPIPMatcher"]:
             warnings.append(
                 "Properties for the Exact Attribute Matcher and the JavaScript PIP Matcher should not be modified.")
             return isamAppliance.create_return_object(changed=False, warnings=warnings)
@@ -115,10 +118,8 @@ def _check(isamAppliance, description, properties):
         del ret_obj['data']['id']
         # del ret_obj['data']['properties']['id']
         del ret_obj['data']['description']
-        count = 0
-        for i in ret_obj['data']['properties']:
+        for count, i in enumerate(ret_obj['data']['properties']):
             del ret_obj['data']['properties'][count]['id']
-            count += 1
         import ibmsecurity.utilities.tools
         sorted_json_data = ibmsecurity.utilities.tools.json_sort(json_data)
         logger.debug("Sorted input: {0}".format(sorted_json_data))

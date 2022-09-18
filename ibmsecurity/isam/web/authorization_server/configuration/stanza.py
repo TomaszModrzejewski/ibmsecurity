@@ -21,15 +21,14 @@ def add(isamAppliance, id, stanza_id, check_mode=False, force=False):
     """
     stanza_exists, warnings = _check(isamAppliance, id, stanza_id)
 
-    if not warnings:
-        if force is True or stanza_exists is False:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True, warnings=warnings)
-            else:
-                return isamAppliance.invoke_post(
-                    description="Add stanza name - Authorization Server",
-                    uri="{0}/{1}/configuration/stanza/{2}/v1".format(uri, id, stanza_id),
-                    data={}, requires_model=requires_model)
+    if not warnings and (force is True or stanza_exists is False):
+        if check_mode is True:
+            return isamAppliance.create_return_object(changed=True, warnings=warnings)
+        else:
+            return isamAppliance.invoke_post(
+                description="Add stanza name - Authorization Server",
+                uri="{0}/{1}/configuration/stanza/{2}/v1".format(uri, id, stanza_id),
+                data={}, requires_model=requires_model)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -40,15 +39,14 @@ def delete(isamAppliance, id, stanza_id, check_mode=False, force=False):
     """
     stanza_exists, warnings = _check(isamAppliance, id, stanza_id)
 
-    if not warnings:
-        if force is True or stanza_exists is True:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True, warnings=warnings)
-            else:
-                return isamAppliance.invoke_delete(
-                    description="Delete Authorization Server configuration stanza",
-                    uri="{0}/{1}/configuration/stanza/{2}/v1".format(uri, id, stanza_id),
-                    requires_model=requires_model)
+    if not warnings and (force is True or stanza_exists is True):
+        if check_mode is True:
+            return isamAppliance.create_return_object(changed=True, warnings=warnings)
+        else:
+            return isamAppliance.invoke_delete(
+                description="Delete Authorization Server configuration stanza",
+                uri="{0}/{1}/configuration/stanza/{2}/v1".format(uri, id, stanza_id),
+                requires_model=requires_model)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -63,9 +61,9 @@ def _check(isamAppliance, id, stanza_id):
     if not warnings:
         for stanza in ret_obj['data']:
             if stanza == stanza_id:
-                logger.info("Stanza found in resource: " + id)
+                logger.info(f"Stanza found in resource: {id}")
                 stanza_exists = True
-        logger.info("Stanza *not* found in resource: " + id)
+        logger.info(f"Stanza *not* found in resource: {id}")
     return stanza_exists, warnings
 
 
@@ -86,8 +84,7 @@ def compare(isamAppliance1, isamAppliance2, id, id2=None):
     ret_obj1 = get(isamAppliance1, id)
     warnings = ret_obj1['warnings']
     if warnings and 'Docker' in warnings[0]:
-        return isamAppliance.create_return_object(warnings=ret_obj1['warnings'])
-
+        return isamAppliance.create_return_object(warnings=warnings)
     entries = {}
     for stanza in ret_obj1['data']:
         entries[stanza] = {}

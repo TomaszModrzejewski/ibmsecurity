@@ -38,16 +38,9 @@ def _check(isamAppliance, replicating):
     :return:
     """
 
-    check_obj = {'value': False, 'warnings':""}
     ret_obj = get(isamAppliance)
-    check_obj['warnings']=ret_obj['warnings']
-
+    check_obj = {'value': False, 'warnings': ret_obj['warnings']}
     if ret_obj['data'] != {}:
-        if ret_obj['data']['replicating'] != replicating:
-            check_obj['value'] = True
-            return check_obj
-        else:
-            check_obj['value'] = False
-            return check_obj
-
+        check_obj['value'] = ret_obj['data']['replicating'] != replicating
+        return check_obj
     return check_obj

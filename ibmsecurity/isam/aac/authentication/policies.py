@@ -64,50 +64,47 @@ def add(isamAppliance, name, policy, uri, description="", dialect="urn:ibm:secur
     """
     Duplicate and create an authentication policy
     """
-    if force is True or _check(isamAppliance, name=name) is False:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
+    if force is not True and _check(isamAppliance, name=name) is not False:
+        return isamAppliance.create_return_object()
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
+    json_data = {
+        "name": name,
+        "description": description,
+        "policy": policy,
+        "uri": uri,
+        "dialect": dialect
+    }
+    warnings = []
+    if enabled is not None:
+        if tools.version_compare(isamAppliance.facts["version"], "9.0.2.1") < 0:
+            warnings.append(
+                "Appliance is at version: {0}. Enabled parameter not supported unless atleast 9.0.2.1. Ignoring value.".format(
+                    isamAppliance.facts["version"]))
         else:
-            warnings = []
-            json_data = {
-                "name": name,
-                "description": description,
-                "policy": policy,
-                "uri": uri,
-                "dialect": dialect
-            }
-            if enabled is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.2.1") < 0:
-                    warnings.append(
-                        "Appliance is at version: {0}. Enabled parameter not supported unless atleast 9.0.2.1. Ignoring value.".format(
-                            isamAppliance.facts["version"]))
-                else:
-                    json_data["enabled"] = enabled
-            return isamAppliance.invoke_post(
-                "Duplicate and create an authentication policy", module_uri, json_data,
-                requires_modules=requires_modules, requires_version=requires_version, warnings=warnings)
-
-    return isamAppliance.create_return_object()
+            json_data["enabled"] = enabled
+    return isamAppliance.invoke_post(
+        "Duplicate and create an authentication policy", module_uri, json_data,
+        requires_modules=requires_modules, requires_version=requires_version, warnings=warnings)
 
 
 def delete(isamAppliance, id=None, name=None, check_mode=False, force=False):
     """
     Delete an authentication policy
     """
-    if id == None and name == None:
+    if id is None and name is None:
         from ibmsecurity.appliance.ibmappliance import IBMError
         raise IBMError("999", "Either id or name attribute must be provided")
 
     if force is True or _check(isamAppliance, id=id, name=name) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if id == None:
-                ret_obj = get(isamAppliance, name)
-                id = ret_obj['data']['id']
-            return isamAppliance.invoke_delete(
-                "Delete an authentication policy",
-                "{0}/{1}".format(module_uri, id), requires_modules=requires_modules, requires_version=requires_version)
+        if id is None:
+            ret_obj = get(isamAppliance, name)
+            id = ret_obj['data']['id']
+        return isamAppliance.invoke_delete(
+            "Delete an authentication policy",
+            "{0}/{1}".format(module_uri, id), requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -152,7 +149,7 @@ def update(isamAppliance, name, policy, uri, description="",
         except:
             pass
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
@@ -170,11 +167,11 @@ def _check(isamAppliance, id=None, name=None):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if (id is not None and obj['id'] == id) or (name is not None and obj['name'] == name):
-            return True
-
-    return False
+    return any(
+        (id is not None and obj['id'] == id)
+        or (name is not None and obj['name'] == name)
+        for obj in ret_obj['data']
+    )
 
 
 def search(isamAppliance, name, check_mode=False, force=False):

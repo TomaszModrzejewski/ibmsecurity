@@ -24,15 +24,13 @@ def get(isamAppliance, name, check_mode=False, force=False):
     """
     Retrieve a specific risk profile
     """
-    warnings = []
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings.append("Risk Profile {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object(changed=False, warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    warnings = ["Risk Profile {0} had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
 
 def _get(isamAppliance, id):
@@ -83,33 +81,32 @@ def add(isamAppliance, name, active, description=None, attributes=None, predefin
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "active": active,
-                "predefined": predefined
-            }
-            if attributes is not None:
-                logger.info("Check for empty attributes")
-                # add loop through the attributes
-                # find missing attributeID and go look them up
-                for attv in attributes:
-                    logger.debug("Checking {0}".format(attv['name']))
-                    if 'attributeID' not in attv:
-                        # lookup the attributeID from the name
-                        logger.info(
-                            "AttributeID for {0} was empty".format( attv['name']))
-                        ret_obj = attrib.search(isamAppliance, attv['name'])
-                        artifact_id = ret_obj['data']
-                        if artifact_id == {}:
-                            logger.debug("Attribute {0} had no match, skipping retrieval.".format( attv['name'] ))
-                        else:
-                            attv['attributeID'] = artifact_id
-                json_data['attributes'] = attributes
-            if description is not None:
-                json_data['description'] = description
-            return isamAppliance.invoke_post(
-                "Create a new Risk Profile", uri, json_data)
+        json_data = {
+            "name": name,
+            "active": active,
+            "predefined": predefined
+        }
+        if attributes is not None:
+            logger.info("Check for empty attributes")
+            # add loop through the attributes
+            # find missing attributeID and go look them up
+            for attv in attributes:
+                logger.debug("Checking {0}".format(attv['name']))
+                if 'attributeID' not in attv:
+                    # lookup the attributeID from the name
+                    logger.info(
+                        "AttributeID for {0} was empty".format( attv['name']))
+                    ret_obj = attrib.search(isamAppliance, attv['name'])
+                    artifact_id = ret_obj['data']
+                    if artifact_id == {}:
+                        logger.debug("Attribute {0} had no match, skipping retrieval.".format( attv['name'] ))
+                    else:
+                        attv['attributeID'] = artifact_id
+            json_data['attributes'] = attributes
+        if description is not None:
+            json_data['description'] = description
+        return isamAppliance.invoke_post(
+            "Create a new Risk Profile", uri, json_data)
 
     return isamAppliance.create_return_object()
 
@@ -200,16 +197,16 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     predef = ret_obj['data']['predefined']
     if prof_id == {}:
         logger.info("Risk Profile {0} not found, skipping delete.".format(name))
+    elif predef is True:
+        logger.info("Risk Profile {0} is predefined, skipping delete.".format(name))
     else:
-        if predef is True:
-            logger.info("Risk Profile {0} is predefined, skipping delete.".format(name))
-        else:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True)
-            else:
-                return isamAppliance.invoke_delete(
-                    "Delete a Risk Profile",
-                    "{0}/{1}".format(uri, prof_id))
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_delete(
+                "Delete a Risk Profile", "{0}/{1}".format(uri, prof_id)
+            )
+        )
 
     return isamAppliance.create_return_object()
 

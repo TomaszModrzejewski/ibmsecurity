@@ -82,10 +82,9 @@ def update(isamAppliance, name, connection, locked=False, description='', new_na
     if force is not True:
         if 'uuid' in ret_obj['data']:
             del ret_obj['data']['uuid']
-        if ignore_password_for_idempotency:
-            if 'bindPwd' in connection:
-                warnings.append("Request made to ignore bindPwd for idempotency check.")
-                connection.pop('bindPwd', None)
+        if ignore_password_for_idempotency and 'bindPwd' in connection:
+            warnings.append("Request made to ignore bindPwd for idempotency check.")
+            connection.pop('bindPwd', None)
 
         sorted_ret_obj = tools.json_sort(ret_obj['data'])
         sorted_json_data = tools.json_sort(json_data)
@@ -95,7 +94,7 @@ def update(isamAppliance, name, connection, locked=False, description='', new_na
         if sorted_ret_obj != sorted_json_data:
             needs_update = True
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -185,23 +184,21 @@ def _check_exists(isamAppliance, name=None, id=None):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if (name is not None and obj['name'] == name) or (id is not None and obj['uuid'] == id):
-            return True
-
-    return False
+    return any(
+        (name is not None and obj['name'] == name)
+        or (id is not None and obj['uuid'] == id)
+        for obj in ret_obj['data']
+    )
 
 
 def _create_json(name, connection, description, locked):
     """
     Create a JSON to be used for the REST API call
     """
-    json = {
+    return {
         "connection": connection,
         "type": "isamruntime",
         "name": name,
         "description": description,
-        "locked": locked
+        "locked": locked,
     }
-
-    return json

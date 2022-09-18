@@ -74,20 +74,21 @@ def set_all(isamAppliance, scim_configuration, check_mode=False, force=False):
     if scim_configuration is None or scim_configuration == '':
         return isamAppliance.create_return_object(
             warnings="Need to pass content for scim configuration")
-    else:
-        # Feature: Converting python string to dict (if required)
-        # Attention: JSON strings must use " quotes according to RFC 8259
-        # Example: '{"a":1, "b": 2, "c": 3}'
-        if isinstance(scim_configuration, str):
-            scim_configuration = json.loads(scim_configuration)
-        if force is True or _check(isamAppliance, scim_configuration) is False:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True)
-            else:
-                return isamAppliance.invoke_put(
-                    "Update SCIM settings",
-                    "/mga/scim/configuration",
-                    scim_configuration)
+    # Feature: Converting python string to dict (if required)
+    # Attention: JSON strings must use " quotes according to RFC 8259
+    # Example: '{"a":1, "b": 2, "c": 3}'
+    if isinstance(scim_configuration, str):
+        scim_configuration = json.loads(scim_configuration)
+    if force is True or _check(isamAppliance, scim_configuration) is False:
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_put(
+                "Update SCIM settings",
+                "/mga/scim/configuration",
+                scim_configuration,
+            )
+        )
 
     return isamAppliance.create_return_object()
 
@@ -100,7 +101,7 @@ def _check(isamAppliance, scim_configuration):
     logger.debug("Comparing server scim configuration with desired configuration.")
     # Converting python ret_obj['data'] and scim_configuration from type dict to valid JSON (RFC 8259)
     # e.g. converts python boolean 'True' -> to JSON literal lowercase value 'true'
-    cur_json_string = json.dumps(ret_obj['data']) 
+    cur_json_string = json.dumps(ret_obj['data'])
     cur_sorted_json = tools.json_sort(cur_json_string)
     logger.debug("Server JSON : {0}".format(cur_sorted_json))
     given_json_string = json.dumps(scim_configuration)
@@ -108,7 +109,5 @@ def _check(isamAppliance, scim_configuration):
     logger.debug("Desired JSON: {0}".format(given_sorted_json))
     if cur_sorted_json != given_sorted_json:
         return False
-        logger.debug("Changes detected!")
-    else:
-        logger.debug("Server configuration is identical with desired configuration. No change necessary.")
-        return True
+    logger.debug("Server configuration is identical with desired configuration. No change necessary.")
+    return True

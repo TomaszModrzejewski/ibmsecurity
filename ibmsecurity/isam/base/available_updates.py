@@ -101,8 +101,6 @@ def _check_file(isamAppliance, file):
                 return True
     except Exception as e:
         logger.debug("Exception occured: {0}".format(e))
-        pass
-
     return False
 
 
@@ -113,20 +111,19 @@ def install(isamAppliance, type, version, release_date, name, check_mode=False, 
     if force is True or _check(isamAppliance, type, version, release_date, name) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            ret_obj = isamAppliance.invoke_post("Install Available Update",
-                                                "/updates/available/install",
-                                                {"updates": [
-                                                    {
-                                                        "type": type,
-                                                        "version": version,
-                                                        "release_date": release_date,
-                                                        "name": name
-                                                    }
-                                                ]
-                                                })
-            isamAppliance.facts['version'] = version
-            return ret_obj
+        ret_obj = isamAppliance.invoke_post("Install Available Update",
+                                            "/updates/available/install",
+                                            {"updates": [
+                                                {
+                                                    "type": type,
+                                                    "version": version,
+                                                    "release_date": release_date,
+                                                    "name": name
+                                                }
+                                            ]
+                                            })
+        isamAppliance.facts['version'] = version
+        return ret_obj
 
     return isamAppliance.create_return_object()
 

@@ -97,15 +97,9 @@ def _exists(isamAppliance, uuid):
     :param uuid:
     :return:
     """
-    exists = False
     ret_obj = get_all(isamAppliance)
 
-    for email in ret_obj['data']['emailObjects']:
-        if email['uuid'] == uuid:
-            exists = True
-            break
-
-    return exists
+    return any(email['uuid'] == uuid for email in ret_obj['data']['emailObjects'])
 
 
 def _check(isamAppliance, uuid, name, comment, smtpServer, smtpPort, from_email, to_email):

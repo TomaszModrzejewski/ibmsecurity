@@ -21,12 +21,11 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("Authentication Mechanism Type {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieve a specific authentication mechanism type",
                                         "/iam/access/v8/authentication/mechanism/types/{0}".format(id))
+    logger.info("Authentication Mechanism Type {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, name, force=False, check_mode=False):

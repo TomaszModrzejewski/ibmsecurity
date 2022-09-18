@@ -92,17 +92,11 @@ def _check(isamAppliance, fixpack):
     # Reverse sort the json by 'id'
     json_data_sorted = sorted(ret_obj['data'], key=lambda k: int(k['id']), reverse=True)
 
-    samename_fps = []
-    for fp in json_data_sorted:
-        if fp['name'] == fixpack_name:
-            samename_fps.append(fp)
-
-    if len(samename_fps) > 0:
+    if samename_fps := [
+        fp for fp in json_data_sorted if fp['name'] == fixpack_name
+    ]:
         fp_sorted = sorted(samename_fps, key=lambda k: int(k['id']), reverse=True)
-        if fp_sorted[0]['action'] == 'Installed':
-            return True
-        else:
-            return False
+        return fp_sorted[0]['action'] == 'Installed'
     else:
         return False
 
@@ -116,8 +110,7 @@ def _extract_fixpack_name(fixpack):
     # Look for the follwing string inside the fixpack file
     # FIXPACK_NAME="9021_IPv6_Routes_fix"
     for s in ibmsecurity.utilities.tools.strings(fixpack):
-        match_obj = re.search(r"FIXPACK_NAME=\"(?P<fp_name>\w+)\"", s)
-        if match_obj:
+        if match_obj := re.search(r"FIXPACK_NAME=\"(?P<fp_name>\w+)\"", s):
             logger.info("Fixpack name extracted from file using strings method: {0}".format(match_obj.group('fp_name')))
             return match_obj.group('fp_name')
 

@@ -20,25 +20,26 @@ def set_pw(isamAppliance, oldPassword, newPassword, sessionTimeout="30", httpsPo
     warnings = ["Password change requested - cannot query existing password for idempotency check."]
     if check_mode is True:
         return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    json_data = {
+        "oldPassword": oldPassword,
+        "newPassword": newPassword,
+        "confirmPassword": newPassword,
+        "sessionTimeout": sessionTimeout
+    }
+    if httpsPort is None:
+        if (
+            ibmsecurity.utilities.tools.version_compare(
+                isamAppliance.facts["version"], "9.0.1.0"
+            )
+            >= 0
+        ):
+            warnings.append("Default httpsPort of 443 will be set on the appliance.")
+    elif ibmsecurity.utilities.tools.version_compare(isamAppliance.facts["version"], "9.0.1.0") < 0:
+        warnings.append(
+            "Appliance at version: {0}, httpsPort not supported. Needs 9.0.1.0 or higher. Ignoring httpsPort for this call.")
     else:
-        json_data = {
-            "oldPassword": oldPassword,
-            "newPassword": newPassword,
-            "confirmPassword": newPassword,
-            "sessionTimeout": sessionTimeout
-        }
-        if httpsPort is not None:
-            if ibmsecurity.utilities.tools.version_compare(isamAppliance.facts["version"], "9.0.1.0") < 0:
-                warnings.append(
-                    "Appliance at version: {0}, httpsPort not supported. Needs 9.0.1.0 or higher. Ignoring httpsPort for this call.")
-            else:
-                json_data['httpsPort'] = httpsPort
-        else:
-            if ibmsecurity.utilities.tools.version_compare(isamAppliance.facts["version"], "9.0.1.0") < 0:
-                pass  # Can safely ignore httpsPort
-            else:
-                warnings.append("Default httpsPort of 443 will be set on the appliance.")
-        return isamAppliance.invoke_put("Setting admin password", "/core/admin_cfg", json_data, warnings=warnings)
+        json_data['httpsPort'] = httpsPort
+    return isamAppliance.invoke_put("Setting admin password", "/core/admin_cfg", json_data, warnings=warnings)
 
 
 def set(isamAppliance, oldPassword=None, newPassword=None, minHeapSize=None, maxHeapSize=None, sessionTimeout=30,
@@ -332,15 +333,14 @@ def _check(isamAppliance, oldPassword, newPassword, minHeapSize, maxHeapSize,
     sorted_json_data = json.dumps(json_data, skipkeys=True, sort_keys=True)
     logger.debug("Sorted Existing Data:{0}".format(sorted_ret_obj))
     logger.debug("Sorted Desired  Data:{0}".format(sorted_json_data))
-    if sorted_ret_obj != sorted_json_data:
-        logger.debug("Admin Settings are found to be different. See above JSON for difference.")
-        # Ensure users know how REST API handles httpsPort default value
-        if httpsPort is None and ibmsecurity.utilities.tools.version_compare(isamAppliance.facts["version"],
-                                                                             "9.0.1.0") >= 0:
-            warnings.append("Default httpsPort of 443 will be set on the appliance.")
-        return True, warnings, json_data
-    else:  # No changes required
+    if sorted_ret_obj == sorted_json_data:
         return False, warnings, json_data
+    logger.debug("Admin Settings are found to be different. See above JSON for difference.")
+    # Ensure users know how REST API handles httpsPort default value
+    if httpsPort is None and ibmsecurity.utilities.tools.version_compare(isamAppliance.facts["version"],
+                                                                         "9.0.1.0") >= 0:
+        warnings.append("Default httpsPort of 443 will be set on the appliance.")
+    return True, warnings, json_data
 
 
 def compare(isamAppliance1, isamAppliance2):

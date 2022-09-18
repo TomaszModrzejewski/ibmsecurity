@@ -36,8 +36,8 @@ class ISAMApplianceAdminProxy(ISAMAppliance):
             applianceJunction = self.hostname
 
         # Build up the URL
-        url = self.adminProxyProtocol + "://" + self.adminProxyHostname + ":" + str(
-            self.adminProxyPort) + "/" + applianceJunction + uri
-        self.logger.info("Issuing request to Appliance over AdminProxy: " + url)
+        url = f"{self.adminProxyProtocol}://{self.adminProxyHostname}:{str(self.adminProxyPort)}/{applianceJunction}{uri}"
+
+        self.logger.info(f"Issuing request to Appliance over AdminProxy: {url}")
 
         return url

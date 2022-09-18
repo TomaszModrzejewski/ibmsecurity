@@ -32,13 +32,15 @@ def search(isamAppliance, realm, propname, subsection=None, includeValuesInLine=
     return_obj['data'] = {}
 
     for obj in ret_obj['data']:
-        if obj['type'] == "property":
-            if "{0} = ".format(propname) in obj['name']:
-                logger.info("Found Kerberos realm property {0} id: {1}".format(propname, obj['id']))
-                return_obj['data']['name'] = obj['name']
-                return_obj['data']['id'] = obj['id']
-                return_obj['rc'] = 0
-                break
+        if (
+            obj['type'] == "property"
+            and "{0} = ".format(propname) in obj['name']
+        ):
+            logger.info("Found Kerberos realm property {0} id: {1}".format(propname, obj['id']))
+            return_obj['data']['name'] = obj['name']
+            return_obj['data']['id'] = obj['id']
+            return_obj['rc'] = 0
+            break
 
     return return_obj
 
@@ -55,10 +57,9 @@ def _check(isamAppliance, realm, propname, propvalue, subsection=None):
 
     ret_obj = search(isamAppliance, realm, propname, subsection)
     logger.debug("Looking for existing kerberos property {0} in {1}".format(propname, ret_obj['data']))
-    if ret_obj['data'] != {}:
-        if ret_obj['data']['name'] == propstring:
-            logger.debug("Found kerberos property: {0} in : {1}".format(propname, ret_obj['data']))
-            return True
+    if ret_obj['data'] != {} and ret_obj['data']['name'] == propstring:
+        logger.debug("Found kerberos property: {0} in : {1}".format(propname, ret_obj['data']))
+        return True
     return False
 
 
@@ -69,11 +70,7 @@ def add(isamAppliance, realm, propname, propvalue, subsection=None, check_mode=F
             :param isamAppliance:
             :return:
          """
-    if subsection is None:
-        uriprop = realm
-    else:
-        uriprop = "{0}/{1}".format(realm, subsection)
-
+    uriprop = realm if subsection is None else "{0}/{1}".format(realm, subsection)
     if realms.search(isamAppliance, realm) == {}:
         return isamAppliance.create_return_object(warnings=["Realm: {0} does not exists: ".format(realm)])
 
@@ -108,24 +105,19 @@ def delete(isamAppliance, realm, propname, subsection=None, check_mode=False, fo
     if realms.search(isamAppliance, realm) == {}:
         return isamAppliance.create_return_object(warnings=["Realm: {0} does not exists: ".format(realm)])
 
-    if subsection is None:
-        uriprop = realm
-    else:
-        uriprop = "{0}/{1}".format(realm, subsection)
-
+    uriprop = realm if subsection is None else "{0}/{1}".format(realm, subsection)
     logger.debug(" Remove param uri = {0}/{1}/{2}".format(uri, uriprop, propname))
     ret_obj = search(isamAppliance, realm, propname, subsection)
 
     if ret_obj['data'] == {} and force is False:
         return isamAppliance.create_return_object(
             warnings=["property: {0} not found or force is: {1}".format(propname, force)])
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(description="Delete kerberos realm prop ",
-                                               uri="{0}/{1}/{2}".format(uri, uriprop, propname),
-                                               requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_delete(description="Delete kerberos realm prop ",
+                                           uri="{0}/{1}/{2}".format(uri, uriprop, propname),
+                                           requires_modules=requires_modules, requires_version=requires_version)
 
 
 def update(isamAppliance, realm, propname, propvalue, subsection=None, check_mode=False, force=False):
@@ -135,11 +127,7 @@ def update(isamAppliance, realm, propname, propvalue, subsection=None, check_mod
     :param isamAppliance:
     :return:
     """
-    if subsection is None:
-        uriprop = realm
-    else:
-        uriprop = "{0}/{1}".format(realm, subsection)
-
+    uriprop = realm if subsection is None else "{0}/{1}".format(realm, subsection)
     if realms.search(isamAppliance, realm) == {}:
         return isamAppliance.create_return_object(warnings=["Realm: {0} does not exists: ".format(realm)])
 
@@ -154,27 +142,21 @@ def update(isamAppliance, realm, propname, propvalue, subsection=None, check_mod
         warnings.append("Property {0} not found, skipping update.".format(propname))
         return isamAppliance.create_return_object(warnings=warnings)
 
-    needs_update = False
-
     propstring = "{0} = {1}".format(propname, propvalue)
 
-    if force is not True:
-        if ret_obj['data']['name'] != propstring:
-            needs_update = True
-
-    if force is True or needs_update is True:
+    needs_update = force is not True and ret_obj['data']['name'] != propstring
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            idval = "/{0}/{1}".format(uriprop, propname)
-            return isamAppliance.invoke_put(description="Add kerberos param value",
-                                            uri="{0}/{1}/{2}".format(uri, uriprop, propname),
-                                            data={
-                                                "id": idval,
-                                                "value": propvalue
-                                            },
-                                            requires_modules=requires_modules, requires_version=requires_version,
-                                            warnings=warnings)
+        idval = "/{0}/{1}".format(uriprop, propname)
+        return isamAppliance.invoke_put(description="Add kerberos param value",
+                                        uri="{0}/{1}/{2}".format(uri, uriprop, propname),
+                                        data={
+                                            "id": idval,
+                                            "value": propvalue
+                                        },
+                                        requires_modules=requires_modules, requires_version=requires_version,
+                                        warnings=warnings)
     return isamAppliance.create_return_object(warnings=warnings)
 
 

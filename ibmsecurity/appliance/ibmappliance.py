@@ -21,27 +21,21 @@ class IBMResponse(dict):
         Determines whether the execution succeeded with data retrieved.
         :return: True if the execution succeeded and the data is retrieved.
         """
-        if self.get('rc', -1) == 0 and self.get("data"):
-            return True
-        return False
+        return bool(self.get('rc', -1) == 0 and self.get("data"))
 
     def succeeded(self):
         """
         Determines whether the execution succeeded.
         :return: True if succeeded.
         """
-        if self.get('rc', -1) == 0:
-            return True
-        return False
+        return self.get('rc', -1) == 0
 
     def failed(self):
         """
         Determines whether the execution failed.
         :return: True if the execution failed.
         """
-        if self.get('rc', -1) == 0:
-            return False
-        return True
+        return self.get('rc', -1) != 0
 
 
 class IBMAppliance:

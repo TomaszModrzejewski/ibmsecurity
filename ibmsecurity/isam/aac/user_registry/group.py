@@ -32,15 +32,14 @@ def add(isamAppliance, id, users=None, check_mode=False, force=False):
     if force is True or _check_group(isamAppliance, id) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "id": id,
-                "users": users
-            }
-            return isamAppliance.invoke_post(
-                "Creating a new group in the registry",
-                "{0}/v1".format(uri), json_data,
-                requires_modules=requires_modules, requires_version="10.0.1")
+        json_data = {
+            "id": id,
+            "users": users
+        }
+        return isamAppliance.invoke_post(
+            "Creating a new group in the registry",
+            "{0}/v1".format(uri), json_data,
+            requires_modules=requires_modules, requires_version="10.0.1")
 
     return isamAppliance.create_return_object()
 
@@ -122,11 +121,7 @@ def _check_group(isamAppliance, id):
 
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

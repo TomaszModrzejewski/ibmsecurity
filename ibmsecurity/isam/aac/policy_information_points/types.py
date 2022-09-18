@@ -27,12 +27,11 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name, check_mode=False, force=False)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("PIP Type {0} had no match, skipping retrieval.".format(name))
-        warnings = ["PIP Type {0} had no match, skipping retrieval.".format(name)]
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("PIP Type {0} had no match, skipping retrieval.".format(name))
+    warnings = ["PIP Type {0} had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def search(isamAppliance, name, force=False, check_mode=False):

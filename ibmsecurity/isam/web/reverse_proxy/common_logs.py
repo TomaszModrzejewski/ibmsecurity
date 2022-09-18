@@ -38,11 +38,11 @@ def delete(isamAppliance, file_id, check_mode=False, force=False):
         # Check for Docker
         warnings = ret_obj['warnings']
         if warnings and 'Docker' in warnings[0]:
-            return isamAppliance.create_return_object(warnings=ret_obj['warnings'])
+            return isamAppliance.create_return_object(warnings=warnings)
     except:
         delete_required = False
 
-    if force is True or delete_required is True:
+    if force is True or delete_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=ret_obj['warnings'])
         else:
@@ -58,13 +58,14 @@ def export_file(isamAppliance, file_id, filename, check_mode=False, force=False)
     Exporting a common log file
     """
     import os.path
-    ret_obj = {'warnings': ''}
+    if (
+        force is True or (os.path.exists(filename) is False)
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Exporting a common log file",
+            "{0}/{1}?export".format(uri, file_id),
+            filename, requires_model=requires_model)
 
-    if force is True or (os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Exporting a common log file",
-                "{0}/{1}?export".format(uri, file_id),
-                filename, requires_model=requires_model)
+    ret_obj = {'warnings': ''}
 
     return isamAppliance.create_return_object(warnings=ret_obj['warnings'])

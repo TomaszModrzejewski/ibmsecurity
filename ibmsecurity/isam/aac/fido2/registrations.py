@@ -39,14 +39,13 @@ def delete(isamAppliance, username=None, credentialId=None, check_mode=False, fo
 
     if check_mode is True:
         return isamAppliance.create_return_object(changed=True)
+    if username is None:
+        return isamAppliance.invoke_delete(
+            "Delete a specific FIDO2 registration for a user",
+            "{0}/credentialId/{1}".format(uri, credentialId),
+            requires_modules=requires_modules, requires_version=requires_version)
     else:
-        if username is not None:
-            return isamAppliance.invoke_delete(
-                "Delete all FIDO2 registrations for a user",
-                "{0}/username/{1}".format(uri, username),
-                requires_modules=requires_modules, requires_version=requires_version)
-        elif credentialId is not None:
-            return isamAppliance.invoke_delete(
-                "Delete a specific FIDO2 registration for a user",
-                "{0}/credentialId/{1}".format(uri, credentialId),
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete all FIDO2 registrations for a user",
+            "{0}/username/{1}".format(uri, username),
+            requires_modules=requires_modules, requires_version=requires_version)

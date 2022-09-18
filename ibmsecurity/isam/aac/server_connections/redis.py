@@ -27,14 +27,13 @@ def get(isamAppliance, name=None, check_mode=False, force=False):
    ret_obj = search(isamAppliance, name=name, force=force)
    id = ret_obj["data"]
 
-   if id == {}:
-       logger.info("Redis Service connection {0} had no match, skipping retrieval.".format(name))
-       return isamAppliance.create_return_object()
-   else:
-       return isamAppliance.invoke_get("Retrieving a Redis Service connection",
-                                       "{0}/{1}/v1".format(uri, id),
-                                       requires_modules=requires_modules,
-                                       requires_version=requires_version)
+   if id != {}:
+      return isamAppliance.invoke_get("Retrieving a Redis Service connection",
+                                      "{0}/{1}/v1".format(uri, id),
+                                      requires_modules=requires_modules,
+                                      requires_version=requires_version)
+   logger.info("Redis Service connection {0} had no match, skipping retrieval.".format(name))
+   return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, name, check_mode=False, force=False):
@@ -123,32 +122,31 @@ def update(isamAppliance, name, connection, description='', locked=False, connec
        json_data['name'] = new_name
 
    if force is not True:
-       if 'uuid' in ret_obj['data']:
-           del ret_obj['data']['uuid']
-       if ignore_password_for_idempotency:
-           if 'password' in connection:
-               warnings.append("Request made to ignore password for idempotency check.")
-               connection.pop('password', None)
+      if 'uuid' in ret_obj['data']:
+          del ret_obj['data']['uuid']
+      if ignore_password_for_idempotency and 'password' in connection:
+         warnings.append("Request made to ignore password for idempotency check.")
+         connection.pop('password', None)
 
-       #remove uuid from servers
-       if 'servers' in ret_obj['data']:
-         for x in ret_obj['data']['servers']:
-             if 'uuid' in x:
-                 logger.debug("Deleting uuid from returned object:\n{0}".format(x['uuid']))
-                 del x['uuid']
+      #remove uuid from servers
+      if 'servers' in ret_obj['data']:
+        for x in ret_obj['data']['servers']:
+            if 'uuid' in x:
+                logger.debug("Deleting uuid from returned object:\n{0}".format(x['uuid']))
+                del x['uuid']
 
-       sorted_ret_obj = json.dumps(ret_obj['data'], skipkeys=True, sort_keys=True)
-       sorted_json_data = json.dumps(json_data, skipkeys=True, sort_keys=True)
+      sorted_ret_obj = json.dumps(ret_obj['data'], skipkeys=True, sort_keys=True)
+      sorted_json_data = json.dumps(json_data, skipkeys=True, sort_keys=True)
 
-       logger.debug("Sorted Existing Data:\n{0}".format(sorted_ret_obj))
-       logger.debug("Sorted Desired  Data:\n{0}".format(sorted_json_data))
+      logger.debug("Sorted Existing Data:\n{0}".format(sorted_ret_obj))
+      logger.debug("Sorted Desired  Data:\n{0}".format(sorted_json_data))
 
-       if sorted_ret_obj != sorted_json_data:
-           needs_update = True
+      if sorted_ret_obj != sorted_json_data:
+          needs_update = True
 
-       if 'password' in connection:
-           warnings.append("Since existing password cannot be read - this call will not be idempotent.")
-           needs_update = True
+      if 'password' in connection:
+          warnings.append("Since existing password cannot be read - this call will not be idempotent.")
+          needs_update = True
 
    if force is True or needs_update:
        if check_mode:
@@ -215,11 +213,8 @@ def _check_exists(isamAppliance, name=None, id=None):
    """
    ret_obj = get_all(isamAppliance)
 
-   for obj in ret_obj['data']:
-       if (name is not None and obj['name'] == name) or (id is not None and obj['uuid'] == id):
-           return True
-
-   return False
+   return any((name is not None and obj['name'] == name) or (
+       id is not None and obj['uuid'] == id) for obj in ret_obj['data'])
 
 #test connection for redis is different from the other ones (those are in connection.py)
 def test(isamAppliance, name, check_mode=False, force=False):

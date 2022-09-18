@@ -41,11 +41,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings = ["STS Module {0} had no match, skipping retrieval.".format(name)]
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    warnings = ["STS Module {0} had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _get(isamAppliance, id):

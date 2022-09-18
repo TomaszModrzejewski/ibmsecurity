@@ -14,25 +14,24 @@ def import_file(isamAppliance, node, filename, check_mode=False, force=False):
 
     """
 
-    if check_mode is True:
-        return isamAppliance.create_return_object(changed=True)
-    else:
-
-        return isamAppliance.invoke_post_files(
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_post_files(
             "Import securid file for a node",
             "{0}/securid/{1}".format(uri, node),
             [
                 {
                     'file_formfield': 'file',
                     'filename': filename,
-                    'mimetype': 'application/file'
+                    'mimetype': 'application/file',
                 }
             ],
             {},
-            requires_modules=requires_modules, requires_version=requires_version
+            requires_modules=requires_modules,
+            requires_version=requires_version,
         )
-
-    return isamAppliance.create_return_object()
+    )
 
 
 def delete(isamAppliance, node, check_mode=False, force=False):
@@ -42,14 +41,12 @@ def delete(isamAppliance, node, check_mode=False, force=False):
     """
 
     ret_obj = get(isamAppliance)
-    delete_required = False
+    delete_required = any(
+        obj['fileName'] == "securid" and 'importTimestamp' in obj
+        for obj in ret_obj['data']
+    )
 
-    for obj in ret_obj['data']:
-        if obj['fileName'] == "securid":
-            if 'importTimestamp' in obj:
-                delete_required = True
-
-    if force is True or delete_required is True:
+    if force is True or delete_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

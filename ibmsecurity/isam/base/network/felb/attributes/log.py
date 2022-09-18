@@ -50,9 +50,11 @@ def _check(isamAppliance, json_data):
     change_required = False
 
     if json_data['local'] is True:
-        if 'local' in ret_obj['data']:
-            if json_data['local'] != ret_obj['data']['local']:
-                change_required = True
+        if (
+            'local' in ret_obj['data']
+            and json_data['local'] != ret_obj['data']['local']
+        ):
+            change_required = True
     else:
         sorted_ret_obj = tools.json_sort(ret_obj['data'])
         sorted_json_data = tools.json_sort(json_data)

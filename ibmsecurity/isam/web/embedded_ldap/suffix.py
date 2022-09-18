@@ -65,11 +65,11 @@ def _check(isamAppliance, name):
     if warnings == []:
         for suffix in ret_obj['data']:
             if suffix['name'] == name:
-                logger.info("Suffix found in embedded ldap: " + name)
+                logger.info(f"Suffix found in embedded ldap: {name}")
                 check_value = True
                 return check_value, suffix['id'], warnings
 
-        logger.info("Suffix *not* found in embedded ldap: " + name)
+        logger.info(f"Suffix *not* found in embedded ldap: {name}")
     return check_value, None, warnings
 
 

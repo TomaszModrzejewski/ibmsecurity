@@ -97,21 +97,18 @@ def delete(isamAppliance, id, admin_pwd, admin_id='sec_master', check_mode=False
     if force is True or force == "yes" or azsrv_exists is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            force_yn = "no"
-            if force is True or force == "yes":
-                force_yn = "yes"
-            return isamAppliance.invoke_put(description="Remove a authorization server",
-                                            uri="{0}/{1}/{2}".format(uri, id, version),
-                                            data={
-                                                "operation": "unconfigure",
-                                                "force": force_yn,
-                                                "admin_id": admin_id,
-                                                "admin_pwd": admin_pwd
-                                            },
-                                            requires_modules=requires_modules,
-                                            requires_version=requires_version,
-                                            requires_model=requires_model)
+        force_yn = "yes" if force is True or force == "yes" else "no"
+        return isamAppliance.invoke_put(description="Remove a authorization server",
+                                        uri="{0}/{1}/{2}".format(uri, id, version),
+                                        data={
+                                            "operation": "unconfigure",
+                                            "force": force_yn,
+                                            "admin_id": admin_id,
+                                            "admin_pwd": admin_pwd
+                                        },
+                                        requires_modules=requires_modules,
+                                        requires_version=requires_version,
+                                        requires_model=requires_model)
 
     return isamAppliance.create_return_object(
         warnings="The authorization server instance specified in the request does not exist. Check that the authorization server instance is correct: {0}".format(
@@ -141,22 +138,21 @@ def execute(isamAppliance, id, operation="restart", admin_id="sec_master", admin
                     (operation == "renew")):
                 if check_mode is True:
                     return isamAppliance.create_return_object(changed=True)
-                else:
-                    body_json = {
-                        "operation": operation
-                    }
-                    if operation == "renew":
-                        if admin_pwd is not None:
-                            body_json["admin_id"] = admin_id
-                            body_json["admin_pwd"] = admin_pwd
-                        else:
-                            warnings.append("admin_pwd must be specified when operation is renew")
-                            return isamAppliance.create_return_object(warnings=warnings)
-                    return isamAppliance.invoke_put(description="Execute an operation on authorization server",
-                                                    uri="{0}/{1}/{2}".format(uri, id, version),
-                                                    data=body_json,
-                                                    requires_modules=requires_modules,
-                                                    requires_version=requires_version, warnings=warnings)
+                body_json = {
+                    "operation": operation
+                }
+                if operation == "renew":
+                    if admin_pwd is None:
+                        warnings.append("admin_pwd must be specified when operation is renew")
+                        return isamAppliance.create_return_object(warnings=warnings)
+                    else:
+                        body_json["admin_id"] = admin_id
+                        body_json["admin_pwd"] = admin_pwd
+                return isamAppliance.invoke_put(description="Execute an operation on authorization server",
+                                                uri="{0}/{1}/{2}".format(uri, id, version),
+                                                data=body_json,
+                                                requires_modules=requires_modules,
+                                                requires_version=requires_version, warnings=warnings)
             break
     if _check(isamAppliance, id) is False:
         return isamAppliance.create_return_object(

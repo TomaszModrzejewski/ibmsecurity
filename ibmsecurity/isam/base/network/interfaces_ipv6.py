@@ -34,20 +34,19 @@ def add(isamAppliance, label, address, prefixLength, vlanId=None, allowManagemen
     if force is True or add_needed is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            addr = {
-                '_isNew': True,
-                'objType': 'ipv6Address',
-                'uuid': None,
-                'address': address,
-                'prefixLength': prefixLength,
-                'maskOrPrefix': '',
-                'allowManagement': allowManagement,
-                'enabledAddress': True,
-                'enabled': enabled
-            }
-            ret_obj['ipv6']['addresses'].append(addr)
-            return ibmsecurity.isam.base.network.interfaces._update_interface(isamAppliance, ret_obj)
+        addr = {
+            '_isNew': True,
+            'objType': 'ipv6Address',
+            'uuid': None,
+            'address': address,
+            'prefixLength': prefixLength,
+            'maskOrPrefix': '',
+            'allowManagement': allowManagement,
+            'enabledAddress': True,
+            'enabled': enabled
+        }
+        ret_obj['ipv6']['addresses'].append(addr)
+        return ibmsecurity.isam.base.network.interfaces._update_interface(isamAppliance, ret_obj)
 
     return isamAppliance.create_return_object()
 
@@ -101,10 +100,11 @@ def update(isamAppliance, label, address, new_address, prefixLength, vlanId=None
                         'allowManagement': allowManagement,
                         'enabled': enabled
                     }
-                    update_needed = not (
-                            ibmsecurity.utilities.tools.json_sort(addr) == ibmsecurity.utilities.tools.json_sort(
-                        upd_addr))
-                    if (update_needed is True):
+                    update_needed = ibmsecurity.utilities.tools.json_sort(
+                        addr
+                    ) != ibmsecurity.utilities.tools.json_sort(upd_addr)
+
+                    if update_needed:
                         ret_obj['ipv6']['addresses'].remove(addr)
                         ret_obj['ipv6']['addresses'].append(upd_addr)
                     break
@@ -135,11 +135,11 @@ def set_dhcp(isamAppliance, label, vlanId=None, enabled=False, allowManagement=F
                 'enabled': enabled,
                 'allowManagement': allowManagement
             }
-            update_needed = not (
-                    ibmsecurity.utilities.tools.json_sort(
-                        ret_obj['ipv6']['dhcp']) == ibmsecurity.utilities.tools.json_sort(
-                upd_dhcp))
-            if (update_needed is True):
+            update_needed = ibmsecurity.utilities.tools.json_sort(
+                ret_obj['ipv6']['dhcp']
+            ) != ibmsecurity.utilities.tools.json_sort(upd_dhcp)
+
+            if update_needed:
                 ret_obj['ipv6']['dhcp'] = upd_dhcp
                 # Cannot have DHCP and ip addresses at same time
                 if enabled is True:
@@ -148,7 +148,7 @@ def set_dhcp(isamAppliance, label, vlanId=None, enabled=False, allowManagement=F
             warnings.append("Interface {0} not found, Set dhcp is not supported.".format(label))
             return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
-    if force is True or update_needed is True:
+    if force is True or update_needed:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

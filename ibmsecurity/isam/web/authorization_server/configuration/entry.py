@@ -87,10 +87,7 @@ def _add(isamAppliance, id, stanza_id, entries):
 def _isDocker(isamAppliance, id, stanza_id):
     ret_obj = get_all(isamAppliance, id, stanza_id)
     warnings = ret_obj['warnings']
-    if warnings and 'Docker' in warnings[0]:
-        return True
-    else:
-        return False
+    return bool(warnings and 'Docker' in warnings[0])
 
 
 def set(isamAppliance, id, stanza_id, entries, check_mode=False, force=False):
@@ -128,10 +125,9 @@ def set(isamAppliance, id, stanza_id, entries, check_mode=False, force=False):
                     logger.info(
                         'Deleting entry, will be re-added: {0}/{1}/{2}/{3}'.format(id, stanza_id, entry[0],
                                                                                    val))
-            if process_entry is True:
+            if process_entry:
                 if isinstance(entry[1], list):
-                    for v in entry[1]:
-                        set_entries.append([entry[0], v])
+                    set_entries.extend([entry[0], v] for v in entry[1])
                 else:
                     set_entries.append([entry[0], entry[1]])
 
@@ -151,10 +147,9 @@ def _collapse_entries(entries):
     """
     if entries is None or len(entries) < 1:
         return []
-    else:
-        cur_key = entries[0][0]
-        cur_value = []
-        new_entry = []
+    cur_key = entries[0][0]
+    cur_value = []
+    new_entry = []
 
     for entry in entries:
         if entry[0] == cur_key:
@@ -184,19 +179,18 @@ def delete(isamAppliance, id, stanza_id, entry_id, value_id='', check_mode=False
     if force is True or exists is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            # URL being encoded primarily to handle request-log-format that has "%" values in them
-            f_uri = "{0}/{1}/configuration/stanza/{2}/entry_name/{3}/value/{4}/v1".format(uri, id,
-                                                                                          stanza_id, entry_id, value_id)
-            # Replace % with %25 if it is not encoded already
-            import re
-            ruri = re.sub("%(?![0-9a-fA-F]{2})", "%25", f_uri)
-            # URL encode
-            import urllib.parse
-            full_uri = urllib.parse.quote(ruri)
-            return isamAppliance.invoke_delete(
-                description="Deleting a value from a configuration entry - Authorization Server",
-                uri=full_uri, requires_model=requires_model)
+        # URL being encoded primarily to handle request-log-format that has "%" values in them
+        f_uri = "{0}/{1}/configuration/stanza/{2}/entry_name/{3}/value/{4}/v1".format(uri, id,
+                                                                                      stanza_id, entry_id, value_id)
+        # Replace % with %25 if it is not encoded already
+        import re
+        ruri = re.sub("%(?![0-9a-fA-F]{2})", "%25", f_uri)
+        # URL encode
+        import urllib.parse
+        full_uri = urllib.parse.quote(ruri)
+        return isamAppliance.invoke_delete(
+            description="Deleting a value from a configuration entry - Authorization Server",
+            uri=full_uri, requires_model=requires_model)
 
     return isamAppliance.create_return_object()
 
@@ -212,21 +206,19 @@ def delete_all(isamAppliance, id, stanza_id, entry_id, check_mode=False, force=F
             ret_obj = get(isamAppliance, id, stanza_id, entry_id)
             warnings = ret_obj['warnings']
             if warnings and 'Docker' in warnings[0]:
-                return isamAppliance.create_return_object(warnings=ret_obj['warnings'])
-
+                return isamAppliance.create_return_object(warnings=warnings)
             if ret_obj['data'] != {}:
                 delete_required = True
         except:
             pass
 
-    if force is True or delete_required is True:
+    if force is True or delete_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            f_uri = "{0}/{1}/configuration/stanza/{2}/entry_name/{3}/v1".format(uri, id, stanza_id, entry_id)
-            return isamAppliance.invoke_delete(
-                description="Deleting all values from a configuration entry - Authorization Server", uri=f_uri,
-                requires_model=requires_model)
+        f_uri = "{0}/{1}/configuration/stanza/{2}/entry_name/{3}/v1".format(uri, id, stanza_id, entry_id)
+        return isamAppliance.invoke_delete(
+            description="Deleting all values from a configuration entry - Authorization Server", uri=f_uri,
+            requires_model=requires_model)
 
     return isamAppliance.create_return_object()
 
@@ -281,18 +273,17 @@ def _check(isamAppliance, id, stanza_id, entry_id, value_id):
         if value != value_id:  # Comparing list with no sorting... sequence of values is of importance
             logger.debug("Value arrays do not match!")
             update_required = True
-    else:  # assuming base string provided for value_id
-        if len(value) == 1:
-            if str(value_id) != str(value[0]):
-                logger.debug("Single value do not match!")
-                update_required = True
-                exists = False  # to satisfy delete call
-        else:  # base string will not match a zero length array or multiple values in it
-            logger.debug("Current non-single value does not match provided single value!")
+    elif len(value) == 1:
+        if str(value_id) != str(value[0]):
+            logger.debug("Single value do not match!")
             update_required = True
-            if value_id not in value:
-                logger.debug("Current non-single value does not contain provided single value!")
-                exists = False
+            exists = False  # to satisfy delete call
+    else:  # base string will not match a zero length array or multiple values in it
+        logger.debug("Current non-single value does not match provided single value!")
+        update_required = True
+        if value_id not in value:
+            logger.debug("Current non-single value does not contain provided single value!")
+            exists = False
 
     return exists, update_required, value
 

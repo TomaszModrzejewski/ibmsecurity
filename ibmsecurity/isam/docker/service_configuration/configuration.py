@@ -52,11 +52,10 @@ def set(isamAppliance, hvdb_db_type=None, hvdb_address=None, hvdb_port=None, hvd
         service_json["hvdb_db_secure"] = hvdb_db_secure
     if hvdb_driver_type is not None:
         service_json["hvdb_driver_type"] = hvdb_driver_type
-    if hvdb_solid_tc is not None:
-        if (isinstance(hvdb_solid_tc, basestring)):
-            import ast
-            hvdb_solid_tc = ast.literal_eval(hvdb_solid_tc)
-            service_json["hvdb_solid_tc"] = hvdb_solid_tc
+    if hvdb_solid_tc is not None and (isinstance(hvdb_solid_tc, basestring)):
+        import ast
+        hvdb_solid_tc = ast.literal_eval(hvdb_solid_tc)
+        service_json["hvdb_solid_tc"] = hvdb_solid_tc
 
     if force is True or _check(isamAppliance, service_json) is False:
         if check_mode is True:
@@ -89,11 +88,10 @@ def _check(isamAppliance, service_json):
                     logger.debug(
                         "For key: {0}, values: {1} and {2} do not match.".format(key, value, ret_obj['data'][key]))
                     return False
-            else:
-                if ret_obj['data'][key] != value:
-                    logger.debug(
-                        "For key: {0}, values: {1} and {2} do not match.".format(key, value, ret_obj['data'][key]))
-                    return False
+            elif ret_obj['data'][key] != value:
+                logger.debug(
+                    "For key: {0}, values: {1} and {2} do not match.".format(key, value, ret_obj['data'][key]))
+                return False
         except:  # In case there is an error looking up the key in existing configuration (missing)
             logger.debug("Exception processing Key: {0} Value: {1} - missing key in current config?".format(key, value))
             return False

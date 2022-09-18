@@ -41,11 +41,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings = ["STS Chain Template {0} had no match, skipping retrieval.".format(name)]
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    warnings = ["STS Chain Template {0} had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _get(isamAppliance, id):
@@ -80,9 +79,9 @@ def _flatten_chain(chainItems):
 
     DO NOT Sort the JSON containing chainItems for comparison. Sequence is important! Use this function instead.
     """
-    chainItemsString = ''
-    for ci in chainItems:
-        chainItemsString += ci['id'] + ":" + ci['mode'] + " "
+    chainItemsString = ''.join(
+        ci['id'] + ":" + ci['mode'] + " " for ci in chainItems
+    )
 
     logger.debug("Flattened String: {0}".format(chainItemsString))
 
@@ -99,17 +98,16 @@ def add(isamAppliance, name, chainItems=[], description=None, check_mode=False, 
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "chainItems": chainItems
-            }
-            if description is not None:
-                json_data['description'] = description
-            return isamAppliance.invoke_post(
-                "Create an STS chain template", uri, json_data,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        json_data = {
+            "name": name,
+            "chainItems": chainItems
+        }
+        if description is not None:
+            json_data['description'] = description
+        return isamAppliance.invoke_post(
+            "Create an STS chain template", uri, json_data,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -123,15 +121,14 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if chain_id == {}:
         logger.info("STS Chain Template {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a specific STS chain template",
-                "{0}/{1}".format(uri, chain_id),
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete a specific STS chain template",
+            "{0}/{1}".format(uri, chain_id),
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -144,16 +141,18 @@ def update(isamAppliance, name, chainItems=[], description=None, new_name=None, 
     chain_id, update_required, json_data = _check(isamAppliance, name, chainItems, description, new_name)
     if chain_id is None:
         warnings.append("Cannot update data for unknown STS Chain Template: {0}".format(name))
-    else:
-        if force is True or update_required is True:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True)
-            else:
-                return isamAppliance.invoke_put(
-                    "Update a specific STS chain template",
-                    "{0}/{1}".format(uri, chain_id), json_data,
-                    requires_modules=requires_modules,
-                    requires_version=requires_version)
+    elif force is True or update_required is True:
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_put(
+                "Update a specific STS chain template",
+                "{0}/{1}".format(uri, chain_id),
+                json_data,
+                requires_modules=requires_modules,
+                requires_version=requires_version,
+            )
+        )
 
     return isamAppliance.create_return_object(warnings=warnings)
 

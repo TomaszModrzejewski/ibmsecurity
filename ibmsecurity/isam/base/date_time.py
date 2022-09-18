@@ -25,7 +25,7 @@ def set(isamAppliance, ntpServers="", timeZone="America/New_York", enableNtp=Fal
     """
     Update date/time settings (set NTP server and timezone)
     """
-    
+
     if dateTime is None:
         dateTime = "0000-00-00 00:00:00"
 
@@ -57,9 +57,8 @@ def disable(isamAppliance, check_mode=False, force=False):
     ret_obj = get(isamAppliance)
     warnings = ret_obj['warnings']
 
-    if warnings != []:
-        if "Docker" in warnings[0]:
-            return isamAppliance.create_return_object(warnings=warnings)
+    if warnings != [] and "Docker" in warnings[0]:
+        return isamAppliance.create_return_object(warnings=warnings)
 
     if force is True or ret_obj['data']['ntpConfig']['enableNtp'] == True:
         if check_mode is True:
@@ -88,9 +87,8 @@ def _check(isamAppliance, timeZone, ntpServers, enableNtp):
     ret_obj = get(isamAppliance)
     warnings=ret_obj['warnings']
 
-    if warnings != []:
-        if "Docker" in warnings[0]:
-            return True, warnings
+    if warnings != [] and "Docker" in warnings[0]:
+        return True, warnings
 
     if ret_obj['data']['ntpConfig']['enableNtp'] != enableNtp:
         return False, warnings
@@ -100,9 +98,11 @@ def _check(isamAppliance, timeZone, ntpServers, enableNtp):
         return False, warnings
 
     if ntpServers != None:
-        existing_ntpServers = list()
-        for ntps in ret_obj['data']['ntpConfig']['ntpServers']:
-            existing_ntpServers.append(ntps['ntpServer'])
+        existing_ntpServers = [
+            ntps['ntpServer']
+            for ntps in ret_obj['data']['ntpConfig']['ntpServers']
+        ]
+
         logger.debug(str(sorted(existing_ntpServers)))
         logger.debug(str(sorted(ntpServers.split(','))))
         if sorted(ntpServers.split(',')) != sorted(existing_ntpServers):
@@ -119,13 +119,11 @@ def compare(isamAppliance1, isamAppliance2):
     ret_obj1 = get(isamAppliance1)
     ret_obj2 = get(isamAppliance2)
 
-    if ret_obj1['warnings'] != []:
-        if 'Docker' in ret_obj1['warnings'][0]:
-            return isamAppliance1.create_return_object(warnings=ret_obj1['warnings'])
+    if ret_obj1['warnings'] != [] and 'Docker' in ret_obj1['warnings'][0]:
+        return isamAppliance1.create_return_object(warnings=ret_obj1['warnings'])
 
-    if ret_obj2['warnings'] != []:
-        if 'Docker' in ret_obj2['warnings'][0]:
-            return isamAppliance2.create_return_object(warnings=ret_obj2['warnings'])
+    if ret_obj2['warnings'] != [] and 'Docker' in ret_obj2['warnings'][0]:
+        return isamAppliance2.create_return_object(warnings=ret_obj2['warnings'])
 
     # Ignore actual date / time on servers - they should be same if synced correctly
     if 'dateTime' in ret_obj1['data']:

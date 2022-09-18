@@ -158,11 +158,14 @@ def delete_selection(isamAppliance, policies, command="DELETE", check_mode=False
 def _check_exist(isamAppliance, policy_name):
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['name'] == policy_name:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == policy_name
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check(isamAppliance, policy_name, groups, attributes):

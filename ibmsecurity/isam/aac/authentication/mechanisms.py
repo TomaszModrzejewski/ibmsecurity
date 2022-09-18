@@ -31,13 +31,12 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("Authentication Mechanism {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieve a specific authentication mechanism",
                                         "{0}/{1}".format(module_uri, id),
                                         requires_modules=requires_modules, requires_version=requires_version)
+    logger.info("Authentication Mechanism {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, name, force=False, check_mode=False):
@@ -82,44 +81,58 @@ def add(isamAppliance, name, uri, description="", attributes=None, properties=No
     if force is False:
         ret_obj = search(isamAppliance, name)
 
-    if force is True or ret_obj['data'] == {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
+    if (
+        force is True
+        and check_mode is True
+        or force is not True
+        and ret_obj['data'] == {}
+        and check_mode is True
+    ):
+        return isamAppliance.create_return_object(changed=True)
+    elif force is True or ret_obj['data'] == {}:
+        ret_obj = mechanism_types.search(isamAppliance, typeName)
+        if ret_obj['data'] == {}:
+            from ibmsecurity.appliance.ibmappliance import IBMError
+            raise IBMError("999", "Unable to find Authentication Mechanim Type: {0}".format(typeName))
         else:
-            ret_obj = mechanism_types.search(isamAppliance, typeName)
-            if ret_obj['data'] == {}:
-                from ibmsecurity.appliance.ibmappliance import IBMError
-                raise IBMError("999", "Unable to find Authentication Mechanim Type: {0}".format(typeName))
-            else:
-                typeId = ret_obj['data']
-            json_data = {
-                "name": name,
-                "uri": uri,
-                "description": description,
-                "predefined": predefined,
-                "typeId": typeId
-            }
-            if attributes is not None:
-                json_data['attributes'] = attributes
-            if properties is not None:
-                logger.info("Searching for keys to substitute value with uuids")
-                for property in properties:
-                    id = {}
-                    if property['key'] == "EmailMessage.serverConnection":
-                        id = smtp.search(isamAppliance, property['value'])['data']
-                        logger.info("Found EmailMessage.serverConnection by name[{}] with uuid[{}]".format(property['value'], id))
-                    elif property['key'] == "ScimConfig.serverConnection":
-                        id = ws.search(isamAppliance, property['value'])['data']
-                        logger.info("Found ScimConfig.serverConnection by name[{}] with uuid[{}]".format(property['value'], id))
-                    elif property['key'] == "CI.serverConnection":
-                        id = ci.search(isamAppliance, property['value'])['data']
-                        logger.info("Found CI.serverConnection by name[{}] with uuid[{}]".format(property['value'], id))
-                    if id != {}:
-                        property['value'] = id
-                json_data['properties'] = properties
-            return isamAppliance.invoke_post(
-                "Create a new Authentication Mechanism", module_uri, json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+            typeId = ret_obj['data']
+        json_data = {
+            "name": name,
+            "uri": uri,
+            "description": description,
+            "predefined": predefined,
+            "typeId": typeId
+        }
+        if attributes is not None:
+            json_data['attributes'] = attributes
+        if properties is not None:
+            logger.info("Searching for keys to substitute value with uuids")
+            for property in properties:
+                id = {}
+                if property['key'] == "EmailMessage.serverConnection":
+                    id = smtp.search(isamAppliance, property['value'])['data']
+                    logger.info(
+                        f"Found EmailMessage.serverConnection by name[{property['value']}] with uuid[{id}]"
+                    )
+
+                elif property['key'] == "ScimConfig.serverConnection":
+                    id = ws.search(isamAppliance, property['value'])['data']
+                    logger.info(
+                        f"Found ScimConfig.serverConnection by name[{property['value']}] with uuid[{id}]"
+                    )
+
+                elif property['key'] == "CI.serverConnection":
+                    id = ci.search(isamAppliance, property['value'])['data']
+                    logger.info(
+                        f"Found CI.serverConnection by name[{property['value']}] with uuid[{id}]"
+                    )
+
+                if id != {}:
+                    property['value'] = id
+            json_data['properties'] = properties
+        return isamAppliance.invoke_post(
+            "Create a new Authentication Mechanism", module_uri, json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -133,14 +146,13 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if mech_id == {}:
         logger.info("Authentication Mechanism {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete an Authentication Mechanism",
-                "{0}/{1}".format(module_uri, mech_id),
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete an Authentication Mechanism",
+            "{0}/{1}".format(module_uri, mech_id),
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -184,10 +196,7 @@ def _check(isamAppliance, name, description, attributes, properties, predefined,
         return None, update_required, json_data
     else:
         mech_id = ret_obj['data']['id']
-        if new_name is not None:
-            json_data['name'] = new_name
-        else:
-            json_data['name'] = name
+        json_data['name'] = new_name if new_name is not None else name
         if typeName is not None:
             ret_obj_type = mechanism_types.search(isamAppliance, typeName)
             if ret_obj_type['data'] == {}:
@@ -219,13 +228,22 @@ def _check(isamAppliance, name, description, attributes, properties, predefined,
                 id = {}
                 if property['key'] == "EmailMessage.serverConnection":
                     id = smtp.search(isamAppliance, property['value'])['data']
-                    logger.info("Found EmailMessage.serverConnection by name[{}] with uuid[{}]".format(property['value'], id))
+                    logger.info(
+                        f"Found EmailMessage.serverConnection by name[{property['value']}] with uuid[{id}]"
+                    )
+
                 elif property['key'] == "ScimConfig.serverConnection":
                     id = ws.search(isamAppliance, property['value'])['data']
-                    logger.info("Found ScimConfig.serverConnection by name[{}] with uuid[{}]".format(property['value'], id))
+                    logger.info(
+                        f"Found ScimConfig.serverConnection by name[{property['value']}] with uuid[{id}]"
+                    )
+
                 elif property['key'] == "CI.serverConnection":
                     id = ci.search(isamAppliance, property['value'])['data']
-                    logger.info("Found CI.serverConnection by name[{}] with uuid[{}]".format(property['value'], id))
+                    logger.info(
+                        f"Found CI.serverConnection by name[{property['value']}] with uuid[{id}]"
+                    )
+
                 if id != {}:
                     property['value'] = id
             json_data['properties'] = properties

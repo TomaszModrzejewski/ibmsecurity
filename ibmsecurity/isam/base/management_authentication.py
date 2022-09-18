@@ -76,9 +76,11 @@ def set(isamAppliance,
             update_required = True
         else:
             ret_obj = get(isamAppliance)
-            if "bind_dn" in ret_obj['data']:
-                if ret_obj["data"]["bind_dn"] is None:
-                    del ret_obj["data"]["bind_dn"]
+            if (
+                "bind_dn" in ret_obj['data']
+                and ret_obj["data"]["bind_dn"] is None
+            ):
+                del ret_obj["data"]["bind_dn"]
             sorted_json_data = ibmsecurity.utilities.tools.json_sort(json_data)
             logger.debug("Sorted input: {0}".format(sorted_json_data))
             sorted_ret_obj = ibmsecurity.utilities.tools.json_sort(ret_obj['data'])
@@ -87,7 +89,7 @@ def set(isamAppliance,
                 logger.info("Changes detected, update needed.")
                 update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:

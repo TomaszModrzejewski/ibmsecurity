@@ -42,9 +42,8 @@ def get(isamAppliance, name, check_mode=False, force=False):
 
     ret_obj = search(isamAppliance, name)
 
-    if ret_obj['data'] == {}:
-        logger.info('{0} "{1}" had no match, skipping retrieval.'.format(artifact_type, name))
-        return isamAppliance.create_return_object()
-    else:
+    if ret_obj['data'] != {}:
         return isamAppliance.invoke_get("Retrieve a specific obligation",
                                         "{0}/{1}".format(uri, ret_obj['data']))
+    logger.info('{0} "{1}" had no match, skipping retrieval.'.format(artifact_type, name))
+    return isamAppliance.create_return_object()

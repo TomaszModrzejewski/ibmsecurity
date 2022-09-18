@@ -28,21 +28,20 @@ def add(isamAppliance, username, federation_id, aliases, type=None, partner_id=N
     if force is True or _check(isamAppliance, username) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            fed_id = federation_id
-            if partner_id is not None:
-                fed_id = fed_id + "|" + partner_id
-            json_data = {
-                "username": username,
-                "federation_id": fed_id,
-                "aliases": aliases
-            }
-            if type is not None:
-                json_data['type'] = type
-            return isamAppliance.invoke_post(
-                "Create an alias association", uri, json_data, warnings=warnings,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        fed_id = federation_id
+        if partner_id is not None:
+            fed_id = f"{fed_id}|{partner_id}"
+        json_data = {
+            "username": username,
+            "federation_id": fed_id,
+            "aliases": aliases
+        }
+        if type is not None:
+            json_data['type'] = type
+        return isamAppliance.invoke_post(
+            "Create an alias association", uri, json_data, warnings=warnings,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 

@@ -19,9 +19,8 @@ def add(isamAppliance, label, vlanId, name='', enabled=False, comment='', overri
     check_value, warnings = ibmsecurity.isam.base.network.interfaces._get_interface(isamAppliance, label, vlanId)
 
     if force is True or check_value is None:
-        if warnings != []:
-            if "Docker" in warnings[0]:
-                return isamAppliance.create_return_object(warnings=warnings)
+        if warnings != [] and "Docker" in warnings[0]:
+            return isamAppliance.create_return_object(warnings=warnings)
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
@@ -83,10 +82,7 @@ def update(isamAppliance, name, comment, label, enabled, vlanId=None, bondedTo=N
     update_needed = False
     json_data = {}
     if isinstance(enabled, basestring):
-        if enabled.lower() == 'true':
-            enabled = True
-        else:
-            enabled = False
+        enabled = enabled.lower() == 'true'
     if force is False:
         ret_obj, warnings = ibmsecurity.isam.base.network.interfaces._get_interface(isamAppliance, label, vlanId)
         if ret_obj is not None:
@@ -118,7 +114,7 @@ def update(isamAppliance, name, comment, label, enabled, vlanId=None, bondedTo=N
                 logger.info("Changes detected, update needed.")
                 update_needed = True
 
-        if force is True or update_needed is True:
+        if force is True or update_needed:
             if check_mode is True:
                 return isamAppliance.create_return_object(changed=True)
             else:

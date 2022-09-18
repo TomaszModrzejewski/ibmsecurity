@@ -27,11 +27,7 @@ def _check(isamAppliance, name):
     """
     ret_obj = get_all(isamAppliance)
 
-    for role in ret_obj['data']:
-        if role['name'] == name:
-            return True
-
-    return False
+    return any(role['name'] == name for role in ret_obj['data'])
 
 def add(isamAppliance, name, users=None, groups=None, features=None, check_mode=False, force=False):
     """
@@ -90,12 +86,11 @@ def update(isamAppliance, name, users=None, groups=None, features=None, check_mo
         logger.debug(f"\nSorted Existing management role configuration {name}:\n\n {currentEntriesJSON}\n")
         if (newEntriesJSON != currentEntriesJSON):
             _performUpdate = True
-    if not _performUpdate:
-        logger.debug(f"No changes to role {name}")
-        return isamAppliance.create_return_object(changed=False)
-    else:
+    if _performUpdate:
         return isamAppliance.invoke_put("Set management authorization role",
                                      f"/authorization/roles/{name}/v1", newEntries)
+    logger.debug(f"No changes to role {name}")
+    return isamAppliance.create_return_object(changed=False)
 
 def delete(isamAppliance, name, check_mode=False, force=False):
     """

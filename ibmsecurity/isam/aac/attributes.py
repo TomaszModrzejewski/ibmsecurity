@@ -23,12 +23,11 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     artifact_id = ret_obj['data']
 
-    if artifact_id == {}:
-        logger.info("Attribute {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if artifact_id != {}:
         return isamAppliance.invoke_get("Retrieve a specific attribute",
                                         "{0}/{1}".format(uri, artifact_id))
+    logger.info("Attribute {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, name, force=False, check_mode=False):
@@ -80,20 +79,19 @@ def add(isamAppliance, name, description, attributeURI, type, category, datatype
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "description": description,
-                "uri": attributeURI,
-                "type": type,
-                "category": category,
-                "datatype": datatype,
-                "predefined": predefined,
-                "issuer": issuer,
-                "matcher": matcher,
-                "storageDomain": storageDomain
-            }
-            return isamAppliance.invoke_post("Create a new attribute", uri, json_data)
+        json_data = {
+            "name": name,
+            "description": description,
+            "uri": attributeURI,
+            "type": type,
+            "category": category,
+            "datatype": datatype,
+            "predefined": predefined,
+            "issuer": issuer,
+            "matcher": matcher,
+            "storageDomain": storageDomain
+        }
+        return isamAppliance.invoke_post("Create a new attribute", uri, json_data)
 
     return isamAppliance.create_return_object()
 
@@ -185,11 +183,10 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     else:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            logger.info('Deleting {0} "{1}"'.format(artifact_type, name))
-            return isamAppliance.invoke_delete(
-                "Delete a Attribute",
-                "{0}/{1}".format(uri, ret_obj['data']['id']))
+        logger.info('Deleting {0} "{1}"'.format(artifact_type, name))
+        return isamAppliance.invoke_delete(
+            "Delete a Attribute",
+            "{0}/{1}".format(uri, ret_obj['data']['id']))
 
     return isamAppliance.create_return_object()
 

@@ -67,9 +67,7 @@ def _check(isamAppliance, key, value=None):
 
     # value being none - means called from delete function
     if value is not None:
-        given_value_list = []
-        for v in value:
-            given_value_list.append(str(v))
+        given_value_list = [str(v) for v in value]
         rc = ibmsecurity.utilities.tools.json_sort(exist_value_list) == ibmsecurity.utilities.tools.json_sort(
             given_value_list)
         logger.info(

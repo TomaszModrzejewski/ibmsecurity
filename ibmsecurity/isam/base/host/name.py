@@ -53,8 +53,7 @@ def _check(isamAppliance, host_address, hostname):
         from ibmsecurity.appliance.ibmappliance import IBMError
         raise IBMError("999", "Unable to find host record with adress: {0}".format(host_address))
 
-    for hosts in ret_obj['data']:
-        if hosts['name'].lower() == str(hostname).lower():
-            return True
-
-    return False
+    return any(
+        hosts['name'].lower() == str(hostname).lower()
+        for hosts in ret_obj['data']
+    )

@@ -32,10 +32,7 @@ def get(isamAppliance, path, recursive=None, check_mode=False, force=False):
 def _check(isamAppliance, id):
     ret_obj = get_all(isamAppliance, ignore_error=True)
 
-    if (ret_obj['rc'] != 404 or ret_obj['rc'] != 400):
-        return _parse_id(ret_obj['data'], id)
-    else:
-        return None
+    return _parse_id(ret_obj['data'], id)
 
 
 def _parse_id(contents, dir_name):
@@ -54,14 +51,15 @@ def _parse_id(contents, dir_name):
         rest_dir = ''
     for dir in contents:
         if dir['name'] == cur_dir and dir['type'] == 'Directory':
-            if rest_dir == '':
-                return dir['id']
-            else:
-                if len(dir['children']) == 0:
-                    return None
-                else:
-                    return _parse_id(dir['children'], rest_dir)
+            if rest_dir:
+                return (
+                    None
+                    if len(dir['children']) == 0
+                    else _parse_id(dir['children'], rest_dir)
+                )
 
+            else:
+                return dir['id']
     return None
 
 
@@ -77,12 +75,12 @@ def create(isamAppliance, path, name, check_mode=False, force=False):
     :return:
     """
     warnings = []
-    id = path + "/" + name
+    id = f"{path}/{name}"
     check_dir = _check(isamAppliance, id)
     if check_dir != None:
         warnings.append("Directory {0} exists in path {1}. Ignoring create.".format(name, path))
 
-    if force is True or check_dir == None:
+    if force is True or check_dir is None:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -110,7 +108,7 @@ def delete(isamAppliance, id, check_mode=False, force=False):
     """
     warnings = []
     check_dir = _check(isamAppliance, id)
-    if check_dir == None:
+    if check_dir is None:
         warnings.append("Directory {0} does not exist. Ignoring delete.".format(id))
 
     if force is True or check_dir != None:
@@ -152,7 +150,7 @@ def rename(isamAppliance, id, new_name, check_mode=False, force=False):
     if new_dir_id != None:
         warnings.append("Directory {0} does already exist. Ignoring renameing.".format(new_path))
 
-    if force is True or (dir_id != None and new_dir_id == None):
+    if force is True or dir_id != None and new_dir_id is None:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

@@ -57,11 +57,12 @@ def export_file(isamAppliance, file_id, filename, check_mode=False, force=False)
     """
     import os.path
 
-    if force is True or os.path.exists(filename) is False:
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a cluster manager log file",
-                "/isam/cluster/logging/{0}/v1?export".format(file_id),
-                filename, requires_model=requires_model)
+    if (
+        force is True or os.path.exists(filename) is False
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a cluster manager log file",
+            "/isam/cluster/logging/{0}/v1?export".format(file_id),
+            filename, requires_model=requires_model)
 
     return isamAppliance.create_return_object()

@@ -22,12 +22,11 @@ def get(isamAppliance, server, resourceUri, check_mode=False, force=False):
     ret_obj = search(isamAppliance, server=server, resourceUri=resourceUri, check_mode=check_mode, force=force)
     resource_id = ret_obj['data']
 
-    if resource_id == {}:
-        logger.info("Resource {0}/{1} had no match, skipping retrieval.".format(server, resourceUri))
-        return isamAppliance.create_return_object()
-    else:
+    if resource_id != {}:
         return isamAppliance.invoke_get("Retrieve a specific configured resource",
                                         "{0}/{1}".format(uri, resource_id))
+    logger.info("Resource {0}/{1} had no match, skipping retrieval.".format(server, resourceUri))
+    return isamAppliance.create_return_object()
 
 
 def get_attachments(isamAppliance, server, resourceUri, check_mode=False, force=False):
@@ -37,12 +36,11 @@ def get_attachments(isamAppliance, server, resourceUri, check_mode=False, force=
     ret_obj = search(isamAppliance, server=server, resourceUri=resourceUri, check_mode=check_mode, force=force)
     resource_id = ret_obj['data']
 
-    if resource_id == {}:
-        logger.info("Resource {0}/{1} had no match, skipping retrieval.".format(server, resourceUri))
-        return isamAppliance.create_return_object()
-    else:
+    if resource_id != {}:
         return isamAppliance.invoke_get("Retrieve a list of attachments for a resource",
                                         "{0}/{1}/policies".format(uri, resource_id))
+    logger.info("Resource {0}/{1} had no match, skipping retrieval.".format(server, resourceUri))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, server, resourceUri, force=False, check_mode=False):
@@ -184,12 +182,11 @@ def update_attachments(isamAppliance, server, resourceUri, attachments, action, 
     if force is True or _check(cur_policies, attachments, action) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            new_policies = _convert_policy_name_to_id(isamAppliance, attachments)
-            return isamAppliance.invoke_put(
-                "Update the attachments for a resource",
-                "{0}/{1}/policies{2}".format(uri, ret_obj['data']['id'], tools.create_query_string(action=action)),
-                new_policies)
+        new_policies = _convert_policy_name_to_id(isamAppliance, attachments)
+        return isamAppliance.invoke_put(
+            "Update the attachments for a resource",
+            "{0}/{1}/policies{2}".format(uri, ret_obj['data']['id'], tools.create_query_string(action=action)),
+            new_policies)
     return isamAppliance.create_return_object()
 
 
@@ -213,17 +210,11 @@ def _check(policies, attachments, action):
     if action == 'add':
         logger.info("Check if there is at least one match returned: {0}".format(partial_match))
         return not partial_match
-    # Delete will be rejected if there is a partial match (has to be full match)
     elif action == 'remove':
         logger.info("Check if there is a full match of provided policies: {0}".format(full_match))
         return full_match
-    # Set requires that there be a full match and the number of elements match
     elif action == 'set':
-        if len(policies) == len(attachments) and full_match is True:
-            return False
-        else:
-            return True
-    #Force delete will be rejected if there is no match
+        return len(policies) != len(attachments) or full_match is not True
     elif action == 'force_remove':
         logger.info("Check if there is at least one match returned: {0}".format(partial_match))
         return partial_match
@@ -266,7 +257,7 @@ def publish_list(isamAppliance, attachments, check_mode=False, force=False):
             id_list.append(ret_obj['data']['id'])
     logger.debug('Attachments: {0}'.format(id_list))
 
-    if len(id_list) > 0:
+    if id_list:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
@@ -380,13 +371,12 @@ def delete(isamAppliance, server, resourceUri, check_mode=False, force=False):
 
     if resourceID == {}:
         logger.info("ResourceURI {0}/{1} not found, skipping delete.".format(server, resourceUri))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a configured resource",
-                "{0}/{1}".format(uri, resourceID))
+        return isamAppliance.invoke_delete(
+            "Delete a configured resource",
+            "{0}/{1}".format(uri, resourceID))
 
     return isamAppliance.create_return_object()
 

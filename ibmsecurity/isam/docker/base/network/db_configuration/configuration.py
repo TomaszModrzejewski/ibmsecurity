@@ -40,10 +40,9 @@ def set(isamAppliance, hvdb_db_type, hvdb_address, hvdb_port, hvdb_user, hvdb_pa
             return isamAppliance.create_return_object(
                 warnings="hvdb_db_type {0} requires hvdb_db_secure".format(hvdb_db_type))
 
-    if hvdb_db_type == "oracle":
-        if hvdb_driver_type is None:
-            return isamAppliance.create_return_object(
-                warnings="hvdb_db_type {0} requires hvdb_driver_type".format(hvdb_db_type))
+    if hvdb_db_type == "oracle" and hvdb_driver_type is None:
+        return isamAppliance.create_return_object(
+            warnings="hvdb_db_type {0} requires hvdb_driver_type".format(hvdb_db_type))
 
     if isinstance(hvdb_port, basestring):
         hvdb_port = int(hvdb_port)
@@ -97,11 +96,9 @@ def _check(isamAppliance, db_json, ignore_password_for_idempotency=False):
     :return:
     """
 
-    obj = {'value': True, 'warnings': ""}
-
     ret_obj = get(isamAppliance)
 
-    obj['warnings'] = ret_obj['warnings']
+    obj = {'value': True, 'warnings': ret_obj['warnings']}
     del_password = False
 
     if ignore_password_for_idempotency is True:
@@ -117,15 +114,11 @@ def _check(isamAppliance, db_json, ignore_password_for_idempotency=False):
     logger.debug("Sorted Existing Data:{0}".format(sorted_ret_obj))
     logger.debug("Sorted Desired  Data:{0}".format(sorted_json_data))
 
-    if del_password is True:
+    if del_password:
         db_json['hvdb_password'] = password
 
-    if sorted_ret_obj != sorted_json_data:
-        obj['value'] = False
-        return obj
-    else:
-        obj['value'] = True
-        return obj
+    obj['value'] = sorted_ret_obj == sorted_json_data
+    return obj
 
 
 def compare(isamAppliance1, isamAppliance2):

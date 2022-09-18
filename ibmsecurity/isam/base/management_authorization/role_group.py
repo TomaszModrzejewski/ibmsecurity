@@ -19,7 +19,7 @@ def set(isamAppliance, name, group_name, type='embedded_ldap', check_mode=False,
     new_group = True
     ret_obj = ibmsecurity.isam.base.management_authorization.role.get(isamAppliance, name)
 
-    if (ret_obj['data']['groups'] == None):
+    if ret_obj['data']['groups'] is None:
         ret_obj['data']['groups'] = []
     else:
         for grp in ret_obj['data']['groups']:

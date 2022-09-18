@@ -37,15 +37,17 @@ def create(isamAppliance, comment='', wrp=None, isam_runtime=None, lmi=None, clu
     """
     Creating a new support file
     """
-    json_data = {}
-    json_data['comment'] = comment
-    min_version = True
+    json_data = {'comment': comment}
+    min_version = (
+        'version' not in isamAppliance.facts
+        or isamAppliance.facts['version'] is None
+        or tools.version_compare(
+            isamAppliance.facts['version'], requires_version
+        )
+        >= 0
+    )
 
-    if 'version' in isamAppliance.facts and isamAppliance.facts['version'] is not None:
-        if tools.version_compare(isamAppliance.facts['version'], requires_version) < 0:
-            min_version = False
-
-    if min_version is True:
+    if min_version:
         if wrp != None:
             json_data['wrp'] = wrp
 
@@ -90,22 +92,13 @@ def _check(isamAppliance, comment='', id=None):
     """
     ret_obj = get(isamAppliance)
 
-    if id != None:
-        for sups in ret_obj['data']:
-            if sups['id'] == id:
-                return True
-    else:
-        for sups in ret_obj['data']:
-            if sups['comment'] == comment:
-                return True
-
-    #        if isinstance(ret_obj['data'], list):
-    #            # check only latest comment
-    #            sup_file = min(ret_obj['data'], key=lambda sup: sup['index'])
-    #            if sup_file['comment'] == comment:
-    #                return True
-
-    return False
+    return any(
+        id != None
+        and sups['id'] == id
+        or id is None
+        and sups['comment'] == comment
+        for sups in ret_obj['data']
+    )
 
 
 def delete(isamAppliance, id, check_mode=False, force=False):
@@ -115,12 +108,15 @@ def delete(isamAppliance, id, check_mode=False, force=False):
     if force is True or _check(isamAppliance, id=id) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if isinstance(id, list):
-                del_uri = "{0}/multi_destroy{1}".format(uri, tools.create_query_string(record_ids=','.join(id)))
-            else:
-                del_uri = "{0}/{1}".format(uri, id)
-            return isamAppliance.invoke_delete("Deleting a support file", del_uri)
+        del_uri = (
+            "{0}/multi_destroy{1}".format(
+                uri, tools.create_query_string(record_ids=','.join(id))
+            )
+            if isinstance(id, list)
+            else "{0}/{1}".format(uri, id)
+        )
+
+        return isamAppliance.invoke_delete("Deleting a support file", del_uri)
 
     return isamAppliance.create_return_object()
 
@@ -148,12 +144,17 @@ def download(isamAppliance, filename, id, check_mode=False, force=False):
     Download snapshot file(s) to a zip file.
     Note: id can be a list or a single value
     """
-    if force is True or (_check(isamAppliance, id=id) is True and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            if isinstance(id, list):
-                id = ','.join(id)
-            uri_download = "{0}/download{1}".format(uri, tools.create_query_string(record_ids=id))
-            return isamAppliance.invoke_get_file("Downloading snapshots", uri_download, filename)
+    if (
+        force is True
+        or (
+            _check(isamAppliance, id=id) is True
+            and os.path.exists(filename) is False
+        )
+    ) and check_mode is False:
+        if isinstance(id, list):
+            id = ','.join(id)
+        uri_download = "{0}/download{1}".format(uri, tools.create_query_string(record_ids=id))
+        return isamAppliance.invoke_get_file("Downloading snapshots", uri_download, filename)
 
     return isamAppliance.create_return_object()
 

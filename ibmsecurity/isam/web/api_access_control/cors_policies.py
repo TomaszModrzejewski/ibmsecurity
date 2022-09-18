@@ -174,11 +174,14 @@ def delete_selection(isamAppliance, policies, command="DELETE", check_mode=False
 def _check_exist(isamAppliance, cors_policy_name):
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['name'] == cors_policy_name:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == cors_policy_name
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check(isamAppliance, cors_policy_name, allowed_origins, allow_credentials, exposed_headers,
@@ -210,11 +213,10 @@ def _check(isamAppliance, cors_policy_name, allowed_origins, allow_credentials, 
     logger.debug("Sorted input: {0}".format(sorted_obj1))
     sorted_obj2 = tools.json_sort(current_data)
     logger.debug("Sorted existing data: {0}".format(sorted_obj2))
-    if sorted_obj1 != sorted_obj2:
-        logger.info("Changes detected, update needed.")
-        return True, ret_obj['warnings'], json_data
-    else:
+    if sorted_obj1 == sorted_obj2:
         return False, ret_obj['warnings'], json_data
+    logger.info("Changes detected, update needed.")
+    return True, ret_obj['warnings'], json_data
 
 
 def compare(isamAppliance1, isamAppliance2):

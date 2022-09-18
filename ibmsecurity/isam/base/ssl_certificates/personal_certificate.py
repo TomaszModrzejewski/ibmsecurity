@@ -130,12 +130,17 @@ def export_cert(isamAppliance, kdb_id, cert_id, filename, check_mode=False, forc
     """
     Exporting a personal certificate from a certificate database
     """
-    if force is True or (_check(isamAppliance, kdb_id, cert_id) is True and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Exporting a personal certificate from a certificate database",
-                "/isam/ssl_certificates/{0}/personal_cert/{1}?export".format(kdb_id, cert_id),
-                filename)
+    if (
+        force is True
+        or (
+            _check(isamAppliance, kdb_id, cert_id) is True
+            and os.path.exists(filename) is False
+        )
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Exporting a personal certificate from a certificate database",
+            "/isam/ssl_certificates/{0}/personal_cert/{1}?export".format(kdb_id, cert_id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -173,19 +178,16 @@ def extract_cert(isamAppliance, kdb_id, cert_id, password, filename, check_mode=
     if force is True or (_check(isamAppliance, kdb_id, cert_id) is True and os.path.exists(filename) is False):
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            ret_obj = isamAppliance.invoke_post(
-                "Extracting a personal certificate from a certificate database",
-                "/isam/ssl_certificates/{0}/personal_cert/{1}".format(kdb_id, cert_id),
-                {
-                    'operation': 'extract',
-                    'type': 'pkcs12',
-                    'password': password
-                })
-            extracted_file = open(filename, 'wb')
+        ret_obj = isamAppliance.invoke_post(
+            "Extracting a personal certificate from a certificate database",
+            "/isam/ssl_certificates/{0}/personal_cert/{1}".format(kdb_id, cert_id),
+            {
+                'operation': 'extract',
+                'type': 'pkcs12',
+                'password': password
+            })
+        with open(filename, 'wb') as extracted_file:
             extracted_file.write(ret_obj['data'])
-            extracted_file.close()
-
     return isamAppliance.create_return_object()
 
 
@@ -195,11 +197,7 @@ def _check(isamAppliance, kdb_id, cert_id):
     """
     ret_obj = get_all(isamAppliance, kdb_id)
 
-    for certdb in ret_obj['data']:
-        if certdb['id'] == cert_id:
-            return True
-
-    return False
+    return any(certdb['id'] == cert_id for certdb in ret_obj['data'])
 
 
 def _check_default(isamAppliance, kdb_id, cert_id, default):
@@ -208,13 +206,17 @@ def _check_default(isamAppliance, kdb_id, cert_id, default):
     """
     ret_obj = get_all(isamAppliance, kdb_id)
 
-    for certdb in ret_obj['data']:
-        if certdb['id'] == cert_id:
-            if (certdb['default'].lower() == 'true' and default.lower() == 'no') or (
-                    certdb['default'].lower() == 'false' and default.lower() == 'yes'):
-                return True
-
-    return False
+    return any(
+        certdb['id'] == cert_id
+        and (
+            (certdb['default'].lower() == 'true' and default.lower() == 'no')
+            or (
+                certdb['default'].lower() == 'false'
+                and default.lower() == 'yes'
+            )
+        )
+        for certdb in ret_obj['data']
+    )
 
 
 def compare(isamAppliance1, isamAppliance2, kdb_id):

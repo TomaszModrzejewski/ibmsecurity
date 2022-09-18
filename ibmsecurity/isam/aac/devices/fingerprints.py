@@ -22,16 +22,14 @@ def get(isamAppliance, name, check_mode=False, force=False):
     """
     Retrieve a device fingerprint for a specific device
     """
-    warnings = []
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings.append("Device {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object(changed=False, warnings=warnings)
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieve a specific Device Fingerprint",
                                         "{0}/{1}".format(uri, id))
+    warnings = ["Device {0} had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
 
 def search(isamAppliance, name, force=False, check_mode=False):
@@ -54,19 +52,21 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     """
     Delete a device fingerprint for a specific device
     """
-    warnings = []
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings.append("Device {0} had no match, skipping delete.".format(name))
-        return isamAppliance.create_return_object(changed=False, warnings=warnings)
-    else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete("Delete a specific Device Fingerprint",
-                                               "{0}/{1}".format(uri, id))
+    if id != {}:
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_delete(
+                "Delete a specific Device Fingerprint",
+                "{0}/{1}".format(uri, id),
+            )
+        )
+
+    warnings = ["Device {0} had no match, skipping delete.".format(name)]
+    return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
 
 def delete_set(isamAppliance, devices, check_mode=False, force=False):

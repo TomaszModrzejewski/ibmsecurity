@@ -23,11 +23,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     pol_id = ret_obj['data']
 
-    if pol_id == {}:
-        logger.info("Policy {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if pol_id != {}:
         return _get(isamAppliance, pol_id)
+    logger.info("Policy {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def _get(isamAppliance, pol_id):
@@ -43,10 +42,12 @@ def export_xacml(isamAppliance, name, filename, check_mode=False, force=False):
     if force is False:
         ret_obj = get(isamAppliance, name=name, check_mode=check_mode, force=force)
 
-    if force is True or (ret_obj['data'] != {} and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            f = open(filename, 'w')
-            f.write(ret_obj['data']['policy'])
+    if (
+        force is True
+        or (ret_obj['data'] != {} and os.path.exists(filename) is False)
+    ) and check_mode is False:
+        f = open(filename, 'w')
+        f.write(ret_obj['data']['policy'])
 
     return isamAppliance.create_return_object()
 
@@ -105,23 +106,22 @@ def add(isamAppliance, name, attributesrequired, policy, description="",
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            try:
-                import json
-                json_data = json.loads(policy)[0]
-                logger.info("Policy {0} contains full policy export".format(name))
-            except json.decoder.JSONDecodeError:
-                logger.info("Policy {0} only contains policy data".format(name))
-                json_data = {
-                    "name": name,
-                    "attributesrequired": attributesrequired,
-                    "description": description,
-                    "predefined": predefined,
-                    "policy": policy,
-                    "dialect": dialect
-                }
+        try:
+            import json
+            json_data = json.loads(policy)[0]
+            logger.info("Policy {0} contains full policy export".format(name))
+        except json.decoder.JSONDecodeError:
+            logger.info("Policy {0} only contains policy data".format(name))
+            json_data = {
+                "name": name,
+                "attributesrequired": attributesrequired,
+                "description": description,
+                "predefined": predefined,
+                "policy": policy,
+                "dialect": dialect
+            }
 
-            return isamAppliance.invoke_post("Create a new Policy", uri, json_data)
+        return isamAppliance.invoke_post("Create a new Policy", uri, json_data)
 
     return isamAppliance.create_return_object()
 
@@ -135,13 +135,12 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if mech_id == {}:
         logger.info("Policy {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a Policy",
-                "{0}/{1}".format(uri, mech_id))
+        return isamAppliance.invoke_delete(
+            "Delete a Policy",
+            "{0}/{1}".format(uri, mech_id))
 
     return isamAppliance.create_return_object()
 
@@ -202,10 +201,7 @@ def _check(isamAppliance, name, attributesrequired, policy, description, dialect
         return None, update_required, json_data
     else:
         pol_id = ret_obj['data']['id']
-        if new_name is not None:
-            json_data['name'] = new_name
-        else:
-            json_data['name'] = name
+        json_data['name'] = new_name if new_name is not None else name
         if description is not None:
             json_data['description'] = description
         else:
