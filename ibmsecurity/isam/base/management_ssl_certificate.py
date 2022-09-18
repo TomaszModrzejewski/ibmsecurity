@@ -26,10 +26,14 @@ def set(isamAppliance, certificate, password, check_mode=False, force=False):
     """
     Import certificate database
     """
-    if not performCertCheck:
-        warnings = ["Idempotency not available. Unable to extract existing certificate to compare with provided one.  Install Python modules python-dateutil and pyOpenSSL."]
-    else:
-        warnings = None
+    warnings = (
+        None
+        if performCertCheck
+        else [
+            "Idempotency not available. Unable to extract existing certificate to compare with provided one.  Install Python modules python-dateutil and pyOpenSSL."
+        ]
+    )
+
     if force is True or not _check(isamAppliance, certificate, password):
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
@@ -70,7 +74,6 @@ def _check(isamAppliance, certificate, password):
         currentCert['notbefore'] = parser.parse(currentCert['notbefore'], ignoretz=True).strftime("%Y-%m-%d")
         currentCert['notafter'] = parser.parse(currentCert['notafter'], ignoretz=True).strftime("%Y-%m-%d")
 
-        newCert = {}
         _type = FILETYPE_PEM
         _enc = 'utf-8'
         with open(certificate, 'rb') as f:
@@ -78,7 +81,16 @@ def _check(isamAppliance, certificate, password):
         p = load_pkcs12(c, password)
 
         certificate = p.get_certificate()
-        newCert['subject'] = ",".join(f"{str(name, 'utf-8')}={str(value, 'utf-8')}" for name, value in reversed(certificate.get_subject().get_components()))
+        newCert = {
+            'subject': ",".join(
+                (
+                    f"{str(name, 'utf-8')}={str(value, 'utf-8')}"
+                    for name, value in reversed(
+                        certificate.get_subject().get_components()
+                    )
+                )
+            )
+        }
 
         x509 = load_certificate(_type, dump_certificate(_type, certificate))
 
@@ -92,10 +104,7 @@ def _check(isamAppliance, certificate, password):
         newc = json.dumps(newCert, skipkeys=True, sort_keys=True)
         logger.debug(f"\nSorted Desired  Management Cert:\n {newc}\n")
 
-        if curc == newc:
-            return True
-        else:
-            return False
+        return curc == newc
     else:
         logger.info('Skipping management certificate check because pyOpenSSL or not available.  Install with pip install pyOpenSSL')
         return False

@@ -44,14 +44,19 @@ def add(isamAppliance, extension, config_data=None, third_party_package=None, ch
         warning_str = "Exception occurred: {0}".format(e)
         return isamAppliance.create_return_object(warnings=[warning_str])
 
-    if config_data:
-        config_str = '{extId:' + id + ',' + config_data + '}'
-    else:
-        config_str = '{extId:' + id + '}'
+    config_str = (
+        '{extId:' + id + ',' + config_data + '}'
+        if config_data
+        else '{extId:' + id + '}'
+    )
 
-    files = {}
+    files = {
+        'extension_support_package': (
+            tools.path_leaf(extension),
+            open(extension, 'rb'),
+        )
+    }
 
-    files['extension_support_package'] = (tools.path_leaf(extension), open(extension, 'rb'))
     files['config_data'] = (None, config_str)
 
     if third_party_package:
@@ -93,56 +98,52 @@ def update(isamAppliance, extId, config_data=None, third_party_package=None, che
     :return:
     """
 
-    if force is True or search(isamAppliance, extId=extId):
-        if check_mode:
-            return isamAppliance.create_return_object(changed=True)
+    if force is not True and not search(isamAppliance, extId=extId):
+        return isamAppliance.create_return_object()
+    if check_mode:
+        return isamAppliance.create_return_object(changed=True)
+    config_str = (
+        '{extId:' + extId + ',' + config_data + '}'
+        if config_data
+        else '{extId:' + extId + '}'
+    )
+
+    files = {'config_data': (None, config_str)}
+
+    if third_party_package:
+        if isinstance(third_party_package, basestring):
+            files['third_party_package'] = (
+                tools.path_leaf(third_party_package), open(third_party_package, 'rb'))
+        elif len(third_party_package) == 1:
+            files['third_party_package'] = (
+                tools.path_leaf(third_party_package[0]), open(third_party_package[0], 'rb'))
         else:
-            if config_data:
-                config_str = '{extId:' + extId + ',' + config_data + '}'
-            else:
-                config_str = '{extId:' + extId + '}'
+            counter = 0
+            for file in third_party_package:
+                third_party = 'third_party_package{0}'.format(counter)
+                files[third_party] = (tools.path_leaf(file), open(file, 'rb'))
+                counter = counter + 1
 
-            files = {}
-
-            files['config_data'] = (None, config_str)
-
-            if third_party_package:
-                if isinstance(third_party_package, basestring):
-                    files['third_party_package'] = (
-                        tools.path_leaf(third_party_package), open(third_party_package, 'rb'))
-                elif len(third_party_package) == 1:
-                    files['third_party_package'] = (
-                        tools.path_leaf(third_party_package[0]), open(third_party_package[0], 'rb'))
-                else:
-                    counter = 0
-                    for file in third_party_package:
-                        third_party = 'third_party_package{0}'.format(counter)
-                        files[third_party] = (tools.path_leaf(file), open(file, 'rb'))
-                        counter = counter + 1
-
-            return isamAppliance.invoke_post_files(
-                "Update an Extension",
-                "{0}/{1}".format(uri, extId),
-                [],
-                files,
-                requires_modules=requires_modules,
-                requires_version=requires_version,
-                json_response=False,
-                data_as_files=True)
-
-    return isamAppliance.create_return_object()
+    return isamAppliance.invoke_post_files(
+        "Update an Extension",
+        "{0}/{1}".format(uri, extId),
+        [],
+        files,
+        requires_modules=requires_modules,
+        requires_version=requires_version,
+        json_response=False,
+        data_as_files=True)
 
 
 def set(isamAppliance, extension=None, extId=None, config_data=None, third_party_package=None, check_mode=False,
         force=False):
-    if extId:
-        if search(isamAppliance, extId):
-            return update(isamAppliance=isamAppliance, extId=extId, config_data=config_data,
-                          third_party_package=third_party_package, check_mode=check_mode, force=True)
-    else:
+    if not extId:
         return add(isamAppliance=isamAppliance, extension=extension, config_data=config_data,
                    third_party_package=third_party_package, check_mode=check_mode, force=force)
 
+    if search(isamAppliance, extId):
+        return update(isamAppliance=isamAppliance, extId=extId, config_data=config_data,
+                      third_party_package=third_party_package, check_mode=check_mode, force=True)
     return isamAppliance.create_return_object()
 
 
@@ -200,11 +201,7 @@ def search(isamAppliance, extId, check_mode=False, force=False):
 
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == extId:
-            return True
-
-    return False
+    return any(obj['id'] == extId for obj in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

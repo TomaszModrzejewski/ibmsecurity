@@ -48,14 +48,13 @@ def delete(isamAppliance, service_name, check_mode=False, force=False):
     """
 
     check_value, warnings = _check_delete(isamAppliance, service_name)
-    if force is True or check_value is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete("Deleting a service", "{0}/{1}".format(module_uri, service_name),
-                                               requires_version=requires_version, requires_modules=requires_modules, requires_model=requires_model)
-    else:
+    if force is not True and check_value is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_delete("Deleting a service", "{0}/{1}".format(module_uri, service_name),
+                                           requires_version=requires_version, requires_modules=requires_modules, requires_model=requires_model)
 
 
 def get(isamAppliance, service_name, check_mode=False, force=False):
@@ -156,37 +155,13 @@ def _check_add(isamAppliance, enabled, name, address, port, netmask, interface, 
     except:
         return True, warnings
 
-    if 'name' in ret_obj['data']:
-        if ret_obj['data']['name'] == name:
-            logger.warning("Server Already Exist")
-            return False, warnings
-    else:
+    if 'name' not in ret_obj['data']:
         return False, warnings
 
-    if ret_obj['data'] != {}:
-        if ret_obj['data']['enabled'] != enabled:
-            return True, warnings
-        if ret_obj['data']['name'] != name:
-            return True, warnings
-        if ret_obj['data']['address'] != address:
-            return True, warnings
-        if ret_obj['data']['port'] != port:
-            return True, warnings
-        if ret_obj['data']['netmask'] != netmask:
-            return True, warnings
-        if ret_obj['data']['interface'] != interface:
-            return True, warnings
-        if ret_obj['data']['scheduler'] != scheduler:
-            return True, warnings
-        if ret_obj['data']['health_check_interval'] != health_check_interval:
-            return True, warnings
-        if ret_obj['data']['fall'] != fall:
-            return True, warnings
-        if ret_obj['data']['rise'] != rise:
-            return True, warnings
-
-
-    return False, warnings
+    if ret_obj['data']['name'] == name:
+        logger.warning("Server Already Exist")
+        return False, warnings
+    return (True, warnings) if ret_obj['data'] != {} else (False, warnings)
 
 
 def _check_delete(isamAppliance, service_name):
@@ -202,9 +177,8 @@ def _check_delete(isamAppliance, service_name):
     except:
         return False, warnings
 
-    if 'enabled' in ret_obj['data']:
-        if ret_obj['data']['enabled'] == True:
-            return True, warnings
+    if 'enabled' in ret_obj['data'] and ret_obj['data']['enabled'] == True:
+        return True, warnings
 
     return False, warnings
 

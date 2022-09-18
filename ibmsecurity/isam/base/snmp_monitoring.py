@@ -55,7 +55,7 @@ def set(isamAppliance, enabled, port=None, snmpv1v2c=None, snmpv3=None, check_mo
         snmpv1v2c = None
 
     update_required, json_data, warn_str = _check_all(isamAppliance, snmpv1v2c, snmpv3, port, enabled)
-    warnings = warnings + warn_str
+    warnings += warn_str
 
     if force is True or update_required is True:
         if check_mode is True:
@@ -82,9 +82,8 @@ def _check_all(isamAppliance, snmpv1v2c, snmpv3, port, enabled):
 
     ret_obj = get(isamAppliance)
     warnings = ret_obj['warnings']
-    if warnings != []:
-        if 'Docker' in warnings[0]:
-            return update_required, json_data, warnings
+    if warnings != [] and 'Docker' in warnings[0]:
+        return update_required, json_data, warnings
 
     import ibmsecurity.utilities.tools
     sorted_json_data = ibmsecurity.utilities.tools.json_sort(json_data)

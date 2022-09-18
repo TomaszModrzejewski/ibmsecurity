@@ -70,17 +70,15 @@ def _check(isamAppliance, comment='', id=None):
     """
     ret_obj = get(isamAppliance)
 
-    if id != None:
-        for snaps in ret_obj['data']:
-            if snaps['id'] == id:
-                logger.debug("Found id: {}".format(id))
-                return True
-    else:
-        for snaps in ret_obj['data']:
+    for snaps in ret_obj['data']:
+        if id is None:
             if snaps['comment'] == comment:
-                logger.debug("Found comment: {}".format(comment))
+                logger.debug(f"Found comment: {comment}")
                 return True
 
+        elif snaps['id'] == id:
+            logger.debug(f"Found id: {id}")
+            return True
     return False
 
 
@@ -103,7 +101,7 @@ def delete(isamAppliance, id=None, comment=None, check_mode=False, force=False):
         if ret_obj != {} and ret_obj['data'] != {}:
             delete_flag = True
             ids = ret_obj['data']
-    logger.info("Deleting the following list of IDs: {}".format(ids))
+    logger.info(f"Deleting the following list of IDs: {ids}")
     if force is True or delete_flag is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
@@ -118,22 +116,23 @@ def multi_delete(isamAppliance, ids=[], comment=None, check_mode=False, force=Fa
     Delete multiple snapshots based on id or comment
     """
     if comment != None:
-      ret_obj = search(isamAppliance, comment=comment)
-      if ret_obj['data'] == {}:
-        return isamAppliance.create_return_object(changed=False)
-      else:
+        ret_obj = search(isamAppliance, comment=comment)
+        if ret_obj['data'] == {}:
+            return isamAppliance.create_return_object(changed=False)
         if ids == []:
           ids = ret_obj['data']
         else:
           for snaps in ret_obj['data']:
             ids.append(snaps)
 
-    if check_mode is True:
-        return isamAppliance.create_return_object(changed=True)
-    else:
-        return isamAppliance.invoke_delete("Deleting one or multiple snapshots", "/snapshots/multi_destroy?record_ids=" + ",".join(ids))
-
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_delete(
+            "Deleting one or multiple snapshots",
+            "/snapshots/multi_destroy?record_ids=" + ",".join(ids),
+        )
+    )
 
 def modify(isamAppliance, id, comment, check_mode=False, force=False):
     """
@@ -143,10 +142,10 @@ def modify(isamAppliance, id, comment, check_mode=False, force=False):
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
-            return isamAppliance.invoke_put("Modifying snapshot", "/snapshots/" + id,
-                                            {
-                                                'comment': comment
-                                            })
+            return isamAppliance.invoke_put(
+                "Modifying snapshot", f"/snapshots/{id}", {'comment': comment}
+            )
+
 
     return isamAppliance.create_return_object()
 
@@ -174,8 +173,12 @@ def apply(isamAppliance, id=None, comment=None, check_mode=False, force=False):
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
-            return isamAppliance.invoke_post_snapshot_id("Applying snapshot", "/snapshots/apply/" + id,
-                                                         {"snapshot_id": id})
+            return isamAppliance.invoke_post_snapshot_id(
+                "Applying snapshot",
+                f"/snapshots/apply/{id}",
+                {"snapshot_id": id},
+            )
+
 
     return isamAppliance.create_return_object()
 
@@ -201,14 +204,15 @@ def download(isamAppliance, filename, id=None, comment=None, check_mode=False, f
         if ret_obj != {} and ret_obj['data'] != {}:
             download_flag = True
             ids = ret_obj['data']
-    logger.info("Downloading the following list of IDs: {}".format(ids))
+    logger.info(f"Downloading the following list of IDs: {ids}")
 
-    if force is True or (
-            os.path.exists(filename) is False and download_flag is True):  # Don't overwrite if not forced to
-        if check_mode is False:  # We are in check_mode but would try to download named ids
-            # Download all ids known so far
-            return isamAppliance.invoke_get_file("Downloading multiple snapshots",
-                                                 "/snapshots/download?record_ids=" + ",".join(ids), filename)
+    if (
+        force is True
+        or (os.path.exists(filename) is False and download_flag is True)
+    ) and check_mode is False:
+        # Download all ids known so far
+        return isamAppliance.invoke_get_file("Downloading multiple snapshots",
+                                             "/snapshots/download?record_ids=" + ",".join(ids), filename)
 
     return isamAppliance.create_return_object()
 

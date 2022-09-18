@@ -25,7 +25,9 @@ def config(isamAppliance, instance_id, hostname='127.0.0.1', port=443, username=
     :return:
     """
     warnings = [
-        "Idempotency logic will check for existence of {} junction. Use force=True to override.".format(junction)]
+        f"Idempotency logic will check for existence of {junction} junction. Use force=True to override."
+    ]
+
     if force is True or _check_config(isamAppliance, instance_id, junction) is False:
         json_data = {
             "junction": junction,
@@ -41,8 +43,13 @@ def config(isamAppliance, instance_id, hostname='127.0.0.1', port=443, username=
         else:
             return isamAppliance.invoke_post(
                 " Authentication and Context based access configuration for a reverse proxy instance",
-                "/wga/reverseproxy/{}/authsvc_config".format(instance_id), json_data, warnings=warnings,
-                requires_modules=requires_modules, requires_version=requires_version)
+                f"/wga/reverseproxy/{instance_id}/authsvc_config",
+                json_data,
+                warnings=warnings,
+                requires_modules=requires_modules,
+                requires_version=requires_version,
+            )
+
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -60,7 +67,10 @@ def _check_config(isamAppliance, instance_id, junction):
 
     for j in ret_obj['data']:
         if j['id'] == junction:
-            logger.info("Junction {} was found - hence aac config must have already executed.".format(junction))
+            logger.info(
+                f"Junction {junction} was found - hence aac config must have already executed."
+            )
+
             return True
 
     return False

@@ -96,12 +96,17 @@ def export_file(isamAppliance, id, filename, check_mode=False, force=False):
     """
     import os.path
 
-    if force is True or (_check(isamAppliance, id) is True and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a Password Strength",
-                "/wga/pwd_strength/{0}?export".format(id),
-                filename)
+    if (
+        force is True
+        or (
+            _check(isamAppliance, id) is True
+            and os.path.exists(filename) is False
+        )
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a Password Strength",
+            "/wga/pwd_strength/{0}?export".format(id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -135,11 +140,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

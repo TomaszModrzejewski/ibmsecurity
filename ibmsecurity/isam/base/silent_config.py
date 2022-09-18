@@ -13,9 +13,13 @@ def get(isamAppliance, check_mode=False, force=False):
     """
     Getting the silent configuration flag
     """
-    return isamAppliance.invoke_get("Getting the silent configuration flag", "{}/flag".format(module_uri),
-                                    requires_version=requires_version, requires_modules=requires_modules,
-                                    requires_model=requires_model)
+    return isamAppliance.invoke_get(
+        "Getting the silent configuration flag",
+        f"{module_uri}/flag",
+        requires_version=requires_version,
+        requires_modules=requires_modules,
+        requires_model=requires_model,
+    )
 
 
 def update(isamAppliance, flag, check_mode=False, force=False):
@@ -24,23 +28,20 @@ def update(isamAppliance, flag, check_mode=False, force=False):
     """
     ret_obj = get(isamAppliance)
     warnings = ret_obj['warnings']
-    if 'flag' in ret_obj['data']:
-        if ret_obj['data']['flag'] != flag:
-            check_value = True
-        else:
-            check_value = False
-    else:
-        check_value = False
-
-    if force is True or check_value is True:
+    check_value = 'flag' in ret_obj['data'] and ret_obj['data']['flag'] != flag
+    if force is True or check_value:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            json_data = {"flag": flag}
-            return isamAppliance.invoke_put("Setting the silent configuration flag", "{}/flag".format(module_uri),
-                                            json_data, requires_version=requires_version,
-                                            requires_modules=requires_modules,
-                                            requires_model=requires_model)
+        json_data = {"flag": flag}
+        return isamAppliance.invoke_put(
+            "Setting the silent configuration flag",
+            f"{module_uri}/flag",
+            json_data,
+            requires_version=requires_version,
+            requires_modules=requires_modules,
+            requires_model=requires_model,
+        )
+
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -76,18 +77,18 @@ def _export(isamAppliance, uri, network_hostname, filename, network_1_1_ipv4_add
     post_data = post_data[:-1]
     import os.path
 
-    if force is True or os.path.exists(filename) is False:
-        if check_mode is False:  # No point downloading a file if in check_mode
+    if (
+        force is True or os.path.exists(filename) is False
+    ) and check_mode is False:
+        ret_obj = isamAppliance.invoke_request("Generating a silent configuration", "post", uri=uri,
+                                               filename=filename, requires_modules=requires_modules,
+                                               requires_version=requires_version, data=post_data, headers=headers,
+                                               stream=True, requires_model=requires_model)
+        # HTTP POST calls get flagged as changes - but no changes here
+        if ret_obj['changed'] is True:
+            ret_obj['changed'] = False
 
-            ret_obj = isamAppliance.invoke_request("Generating a silent configuration", "post", uri=uri,
-                                                   filename=filename, requires_modules=requires_modules,
-                                                   requires_version=requires_version, data=post_data, headers=headers,
-                                                   stream=True, requires_model=requires_model)
-            # HTTP POST calls get flagged as changes - but no changes here
-            if ret_obj['changed'] is True:
-                ret_obj['changed'] = False
-
-            return ret_obj
+        return ret_obj
 
     return isamAppliance.create_return_object()
 
@@ -99,8 +100,8 @@ def export_iso(isamAppliance, network_hostname, filename=None, network_1_1_ipv4_
     logger.info("Generating an ISO file for silent configuration.")
     uri = "{0}/create/iso".format(module_uri)
     if filename is None:
-        filename = "{}.iso".format(network_hostname)
-        logger.debug("Using filename as: {}".format(filename))
+        filename = f"{network_hostname}.iso"
+        logger.debug(f"Using filename as: {filename}")
 
     return _export(isamAppliance, uri, network_hostname, filename, network_1_1_ipv4_address, network_1_1_ipv4_netmask,
                    network_1_1_ipv4_gateway, network_1_1_ipv6_address, network_1_1_ipv6_prefix,
@@ -115,8 +116,8 @@ def export_img(isamAppliance, network_hostname, filename=None, network_1_1_ipv4_
 
     uri = "{0}/create/usb".format(module_uri)
     if filename is None:
-        filename = "{}.img".format(network_hostname)
-        logger.debug("Using filename as: {}".format(filename))
+        filename = f"{network_hostname}.img"
+        logger.debug(f"Using filename as: {filename}")
 
     return _export(isamAppliance, uri, network_hostname, filename, network_1_1_ipv4_address, network_1_1_ipv4_netmask,
                    network_1_1_ipv4_gateway, network_1_1_ipv6_address, network_1_1_ipv6_prefix,

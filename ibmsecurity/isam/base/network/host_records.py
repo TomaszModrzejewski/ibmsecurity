@@ -56,17 +56,16 @@ def set(isamAppliance, addr, hostnames, check_mode=False, force=False):
     if force or exists is False:
         if check_mode is True:
             ret_obj['changed'] = True
-        else:
-            if addr_exists:
-                # Call update for each hostname
-                for name in hostnames_remaining:
-                    # Forcing because we've already checked that the hostnames don't exist
-                    # TODO: determine how best to return this, since it makes multiple requests
-                    update(isamAppliance, addr, name, check_mode, force=True)
-                    ret_obj['changed'] = True
-            else:
+        elif addr_exists:
+            # Call update for each hostname
+            for name in hostnames_remaining:
                 # Forcing because we've already checked that the hostnames don't exist
-                return add(isamAppliance, addr, hostnames_remaining, check_mode, force=True)
+                # TODO: determine how best to return this, since it makes multiple requests
+                update(isamAppliance, addr, name, check_mode, force=True)
+                ret_obj['changed'] = True
+        else:
+            # Forcing because we've already checked that the hostnames don't exist
+            return add(isamAppliance, addr, hostnames_remaining, check_mode, force=True)
 
     return ret_obj
 
@@ -96,19 +95,15 @@ def add(isamAppliance, addr, hostnames, check_mode=False, force=False):
     if force or addr_exists is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
             # Format POST response correctly
-            hostnames_post = []
-            for entry in hostnames_remaining:
-                hostnames_post.append({'name': entry})
-
-            return isamAppliance.invoke_post(
-                "Creating a host record (IP address and host name)",
-                "/isam/host_records",
-                {
-                    'addr': addr,
-                    'hostnames': hostnames_post
-                }, requires_model=requires_model)
+        hostnames_post = [{'name': entry} for entry in hostnames_remaining]
+        return isamAppliance.invoke_post(
+            "Creating a host record (IP address and host name)",
+            "/isam/host_records",
+            {
+                'addr': addr,
+                'hostnames': hostnames_post
+            }, requires_model=requires_model)
     return isamAppliance.create_return_object(warnings=warnings)
 
 
@@ -171,21 +166,20 @@ def delete(isamAppliance, addr, name=None, check_mode=False, force=False):
     if force or exists is True or name is None:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            if exists is True:
-                # Delete specific entry
-                return isamAppliance.invoke_delete(
-                    "Removing a host name from a host IP address",
-                    "/isam/host_records/{0}/hostnames/{1}".format(addr, name),
-                    requires_model=requires_model
-                )
-            elif exists is False and name is None:
-                # Delete all entries for address if no name given
-                return isamAppliance.invoke_delete(
-                    "Removing a host record (IP address and associated host names)",
-                    "/isam/host_records/{0}".format(addr),
-                    requires_model=requires_model
-                )
+        if exists is True:
+            # Delete specific entry
+            return isamAppliance.invoke_delete(
+                "Removing a host name from a host IP address",
+                "/isam/host_records/{0}/hostnames/{1}".format(addr, name),
+                requires_model=requires_model
+            )
+        elif exists is False and name is None:
+            # Delete all entries for address if no name given
+            return isamAppliance.invoke_delete(
+                "Removing a host record (IP address and associated host names)",
+                "/isam/host_records/{0}".format(addr),
+                requires_model=requires_model
+            )
 
     return isamAppliance.create_return_object(warnings=warnings)
 

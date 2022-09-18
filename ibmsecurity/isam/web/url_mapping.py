@@ -39,15 +39,15 @@ def export_template(isamAppliance, filename, check_mode=False, force=False):
         logger.info("File '{0}' already exists.  Skipping export.".format(filename))
         return isamAppliance.create_return_object()
 
-    if check_mode is True:
-        return isamAppliance.create_return_object(changed=True)
-    else:
-        return isamAppliance.invoke_get_file(
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_get_file(
             "Exporting the DynURL configuration file template",
             "/wga_templates/dynurl_template?export",
-            filename)
-
-    return isamAppliance.create_return_object()
+            filename,
+        )
+    )
 
 
 def add(isamAppliance, name, dynurl_config_data=None, check_mode=False, force=False):
@@ -131,12 +131,13 @@ def export_file(isamAppliance, id, filename, check_mode=False, force=False):
     """
     Exporting a URL Mapping
     """
-    if force is True or _check(isamAppliance, id) is True:
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a URL Mapping",
-                "/wga/dynurl_config/{0}?export".format(id),
-                filename)
+    if (
+        force is True or _check(isamAppliance, id) is True
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a URL Mapping",
+            "/wga/dynurl_config/{0}?export".format(id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -170,11 +171,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def _check_import(isamAppliance, id, filename, check_mode=False):

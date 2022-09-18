@@ -93,12 +93,11 @@ def update(isamAppliance, id, jmt_config_data, check_mode=False, force=False):
     update_required = False
     ret_obj_content = get(isamAppliance, id)
     if ret_obj_content['data'] == {}:
-        warnings.append("Junction Mapping {} not found. Skipping update.".format(id))
-    # Having to strip whitespace to get a good comparison (suspect carriage returns added after save happens)
+        warnings.append(f"Junction Mapping {id} not found. Skipping update.")
     elif (ret_obj_content['data']['contents']).strip() != (jmt_config_data).strip():
         update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -119,12 +118,17 @@ def export_file(isamAppliance, id, filename, check_mode=False, force=False):
     """
     import os.path
 
-    if force is True or (_check(isamAppliance, id) is True and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a Junction Mapping",
-                "/wga/jmt_config/{0}?export".format(id),
-                filename)
+    if (
+        force is True
+        or (
+            _check(isamAppliance, id) is True
+            and os.path.exists(filename) is False
+        )
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a Junction Mapping",
+            "/wga/jmt_config/{0}?export".format(id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -139,15 +143,15 @@ def export_template(isamAppliance, filename, check_mode=False, force=False):
         logger.info("File '{0}' already exists. Skipping export.".format(filename))
         return isamAppliance.create_return_object()
 
-    if check_mode is True:
-        return isamAppliance.create_return_object(changed=True)
-    else:
-        return isamAppliance.invoke_get_file(
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_get_file(
             "Exporting the JMT configuration file template",
             "/isam/wga_templates/jmt_template?export",
-            filename)
-
-    return isamAppliance.create_return_object()
+            filename,
+        )
+    )
 
 
 def import_file(isamAppliance, id, filename, check_mode=False, force=False):
@@ -179,11 +183,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

@@ -78,12 +78,17 @@ def export_db(isamAppliance, cert_id, filename, check_mode=False, force=False):
     """
     import os.path
 
-    if force is True or (_check(isamAppliance, cert_id) is True and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a certificate database",
-                "/isam/ssl_certificates/{0}?export".format(cert_id),
-                filename)
+    if (
+        force is True
+        or (
+            _check(isamAppliance, cert_id) is True
+            and os.path.exists(filename) is False
+        )
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a certificate database",
+            "/isam/ssl_certificates/{0}?export".format(cert_id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -94,15 +99,15 @@ def import_db(isamAppliance, kdb, stash, zip=None, check_mode=False, force=False
     """
     # Grab the filename to use as identifier (strip path and extension)
     import os.path
-    
+
     tmpdir=None
     if zip != None:
         with zipfile.ZipFile(zip,"r") as zip_ref:
             tmpdir = get_random_temp_dir()
             zip_ref.extractall(tmpdir)
-            kdb = tmpdir + '/' + kdb
-            stash = tmpdir + '/' + stash
-    
+            kdb = f'{tmpdir}/{kdb}'
+            stash = f'{tmpdir}/{stash}'
+
     kdb_id = os.path.basename(kdb)
     kdb_id = os.path.splitext(kdb_id)[0]
 
@@ -184,11 +189,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for certdb in ret_obj['data']:
-        if certdb['id'] == id:
-            return True
-
-    return False
+    return any(certdb['id'] == id for certdb in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

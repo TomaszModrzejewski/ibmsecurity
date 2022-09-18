@@ -29,10 +29,10 @@ def _check(isamAppliance, dsc):
 
     if 'dsc' in ret_obj['data']:
         check_value = (ret_obj['data']['dsc']==dsc)
-        return check_value,warnings
     else:
         check_value=True
-        return check_value,warnings
+
+    return check_value,warnings
 
 
 def set(isamAppliance, dsc, check_mode=False, force=False):

@@ -26,12 +26,11 @@ def get(isamAppliance, filename, check_mode=False, force=False):
     ret_obj = search(isamAppliance, filename=filename, check_mode=check_mode, force=force)
     bundle_id = ret_obj['data']
 
-    if bundle_id == {}:
-        logger.info("Bundle {0} had no match, skipping retrieval.".format(filename))
-        return isamAppliance.create_return_object()
-    else:
+    if bundle_id != {}:
         return isamAppliance.invoke_get("Retrieve a specific bundle",
                                         "{0}/{1}".format(uri, bundle_id))
+    logger.info("Bundle {0} had no match, skipping retrieval.".format(filename))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, filename, force=False, check_mode=False):
@@ -101,12 +100,11 @@ def export_bundle(isamAppliance, filename, extract_filename, check_mode=False, f
         -extract_filename is file system location to export the file (e.g. /tmp/mybundle.jar)
     """
     ret_obj = search(isamAppliance, filename)
-    if force is True or ret_obj['data'] != {}:  # ret_obj['data'] is the numeric id assigned by the system
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a specific bundle",
-                "{0}/{1}/file".format(uri, ret_obj['data']),
-                extract_filename)
+    if (force is True or ret_obj['data'] != {}) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a specific bundle",
+            "{0}/{1}/file".format(uri, ret_obj['data']),
+            extract_filename)
 
     return isamAppliance.create_return_object()
 
@@ -129,22 +127,23 @@ def import_bundle(isamAppliance, filename, check_mode=False, force=False):
     f = os.path.basename(filename)
     warnings, bundle_id = _check_import(isamAppliance, filename)
     if force is True or bundle_id:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_post_files(
+        return (
+            isamAppliance.create_return_object(changed=True, warnings=warnings)
+            if check_mode is True
+            else isamAppliance.invoke_post_files(
                 "Import the bundle file for a bundle",
                 "{0}/{1}/file".format(uri, bundle_id),
                 [
                     {
                         'file_formfield': 'file',
                         'filename': filename,
-                        'mimetype': 'application/jar'
+                        'mimetype': 'application/jar',
                     }
                 ],
-                {
-                    "import_file": f
-                }, warnings=warnings)
+                {"import_file": f},
+                warnings=warnings,
+            )
+        )
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -170,7 +169,7 @@ def _check_import(isamAppliance, filename):
             bundle_id = ret_obj['data']['id']
             shutil.rmtree(tmpdir)
             return warnings, bundle_id
-    elif ret_obj['data'] != {} and ret_obj['data']['extensions'] == []:
+    elif ret_obj['data'] != {}:
         bundle_id = ret_obj['data']['id']
         return warnings, bundle_id
     else:
@@ -184,11 +183,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def delete(isamAppliance, filename, check_mode=False, force=False):

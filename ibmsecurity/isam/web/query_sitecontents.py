@@ -37,14 +37,9 @@ def export_file(isamAppliance, file_id, filename, check_mode=False, force=False)
         logger.info("File '{0}' already exists.  Skipping export.".format(filename))
         return isamAppliance.create_return_object()
 
-    filefound = False
-
     ret_obj = get_all(isamAppliance)
-    for obj in ret_obj['data']:
-        if obj['id'] == file_id:
-            filefound = True
-
-    if force is True or filefound is True:
+    filefound = any(obj['id'] == file_id for obj in ret_obj['data'])
+    if force is True or filefound:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

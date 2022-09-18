@@ -47,7 +47,7 @@ def create(isamAppliance, path, name, contents=None, check_mode=False, force=Fal
     if check_file != None:
         warnings.append("File {0} exists in path {1}. Ignoring create.".format(name, path))
 
-    if force is True or check_file == None:
+    if force is True or check_file is None:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -76,26 +76,24 @@ def update(isamAppliance, path, name, contents=None, check_mode=False, force=Fal
     """
     warnings = []
     check_file = _check(isamAppliance, path, name)
-    if check_file == None:
+    if check_file is None:
         warnings.append("File {0} does not exists in path {1}. Ignoring update.".format(name, path))
         return isamAppliance.create_return_object(warnings=warnings)
 
     if force is True or check_file is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if contents is not None:
-                return isamAppliance.invoke_put_files(
-                    "Update a file in the runtime template files directory",
-                    "/mga/template_files/{0}/{1}".format(path, name),
-                    {
-                        'contents': contents,
-                        'type': 'file'
-                    }, requires_modules=requires_modules,
-                    requires_version=requires_version)
-            else:
-                warnings.append("Either contents or filename parameter need to be provided. Skipping update request.")
-                return isamAppliance.create_return_object(warnings=warnings)
+        if contents is not None:
+            return isamAppliance.invoke_put_files(
+                "Update a file in the runtime template files directory",
+                "/mga/template_files/{0}/{1}".format(path, name),
+                {
+                    'contents': contents,
+                    'type': 'file'
+                }, requires_modules=requires_modules,
+                requires_version=requires_version)
+        warnings.append("Either contents or filename parameter need to be provided. Skipping update request.")
+        return isamAppliance.create_return_object(warnings=warnings)
 
 
 def delete(isamAppliance, path, name, check_mode=False, force=False):
@@ -109,22 +107,26 @@ def delete(isamAppliance, path, name, check_mode=False, force=False):
     :param force:
     :return:
     """
-    warnings = []
     check_file = _check(isamAppliance, path, name)
-    if check_file == None:
-        warnings.append("File {0} does not exists in path {1}. Ignoring delete.".format(name, path))
+    if check_file is None:
+        warnings = [
+            "File {0} does not exists in path {1}. Ignoring delete.".format(
+                name, path
+            )
+        ]
+
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or check_file != None:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Deleting a file in the runtime template files directory",
-                "/mga/template_files/{0}/{1}".format(path, name), requires_modules=requires_modules,
-                requires_version=requires_version)
-
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_delete(
+            "Deleting a file in the runtime template files directory",
+            "/mga/template_files/{0}/{1}".format(path, name),
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+        )
+    )
 
 
 def rename(isamAppliance, path, name, new_name, check_mode=False, force=False):
@@ -139,26 +141,27 @@ def rename(isamAppliance, path, name, new_name, check_mode=False, force=False):
     :param force:
     :return:
     """
-    warnings = []
     check_file = _check(isamAppliance, path, name)
-    if check_file == None:
-        warnings.append("File {0} does not exists in path {1}. Ignoring rename.".format(name, path))
+    if check_file is None:
+        warnings = [
+            "File {0} does not exists in path {1}. Ignoring rename.".format(
+                name, path
+            )
+        ]
+
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or check_file != None:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_put(
-                "Renaming a file in the runtime template files directory",
-                "/mga/template_files/{0}/{1}".format(path, name),
-                {
-                    'new_name': new_name,
-                    'type': 'file'
-                }, requires_modules=requires_modules,
-                requires_version=requires_version)
-
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_put(
+            "Renaming a file in the runtime template files directory",
+            "/mga/template_files/{0}/{1}".format(path, name),
+            {'new_name': new_name, 'type': 'file'},
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+        )
+    )
 
 
 def export_file(isamAppliance, path, name, filename, check_mode=False, force=False):
@@ -172,19 +175,22 @@ def export_file(isamAppliance, path, name, filename, check_mode=False, force=Fal
     :param force:
     :return:
     """
-    warnings = []
     check_file = _check(isamAppliance, path, name)
-    if check_file == None:
-        warnings.append("File {0} does not exists in path {1}. Ignoring export.".format(name, path))
+    if check_file is None:
+        warnings = [
+            "File {0} does not exists in path {1}. Ignoring export.".format(
+                name, path
+            )
+        ]
+
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or check_file != None:
-        if check_mode is False:
-            return isamAppliance.invoke_get_file(
-                "Exporting a file from the runtime template files directory",
-                "/mga/template_files/{0}/{1}?type=File&export=true".format(path, name), filename,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+    if check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Exporting a file from the runtime template files directory",
+            "/mga/template_files/{0}/{1}?type=File&export=true".format(path, name), filename,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 

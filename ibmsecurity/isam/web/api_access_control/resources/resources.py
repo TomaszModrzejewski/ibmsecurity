@@ -60,35 +60,33 @@ def add(isamAppliance, instance_name, resource_server_name, method, path, policy
     if force is True or resource_exist is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
+        json_data = {
+            'method': method,
+            'policy': policy,
+            'server_type': server_type,
+            'cors_policy': cors_policy,
+            'static_response_headers': static_response_headers,
+            'url_aliases': url_aliases,
+            'path': path
+            if tools.version_compare(isamAppliance.facts["version"], "10.0.0")
+            < 0
+            else "{0}{1}".format(resource_server_name, path),
+        }
 
-            json_data = {
-                'method': method,
-                'policy': policy,
-                'server_type': server_type,
-                'cors_policy': cors_policy,
-                'static_response_headers': static_response_headers,
-                'url_aliases': url_aliases
-            }
 
-            if tools.version_compare(isamAppliance.facts["version"], "10.0.0") < 0:
-                json_data['path'] = path
-            else:
-                json_data['path'] = "{0}{1}".format(resource_server_name, path)
+        if name is not None:
+            json_data['name'] = name
 
-            if name is not None:
-                json_data['name'] = name
+        if rate_limiting_policy is not None:
+            json_data['rate_limiting_policy'] = rate_limiting_policy
 
-            if rate_limiting_policy is not None:
-                json_data['rate_limiting_policy'] = rate_limiting_policy
+        if documentation is not None:
+            json_data['documentation'] = documentation
 
-            if documentation is not None:
-                json_data['documentation'] = documentation
-
-            return isamAppliance.invoke_post(
-                "Creating a new API Access Control Resource",
-                "{0}/{1}/server{2}/resource".format(uri, instance_name, resource_server_name),
-                json_data, requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_post(
+            "Creating a new API Access Control Resource",
+            "{0}/{1}/server{2}/resource".format(uri, instance_name, resource_server_name),
+            json_data, requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -128,19 +126,30 @@ def update(isamAppliance, instance_name, resource_server_name, method, path, pol
     if force is True or update_required is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if tools.version_compare(isamAppliance.facts["version"], "10.0.0") < 0:
-                url = "{0}/{1}/server{2}/resource/{3}{4}?server_type={5}".format(uri, instance_name,
-                                                                                 resource_server_name,
-                                                                                 method, path, server_type)
-            else:
-                url = "{0}/{1}/server{2}/resource/{3}{2}{4}?server_type={5}".format(uri, instance_name,
-                                                                                    resource_server_name,
-                                                                                    method, path, server_type)
+        url = (
+            "{0}/{1}/server{2}/resource/{3}{4}?server_type={5}".format(
+                uri,
+                instance_name,
+                resource_server_name,
+                method,
+                path,
+                server_type,
+            )
+            if tools.version_compare(isamAppliance.facts["version"], "10.0.0")
+            < 0
+            else "{0}/{1}/server{2}/resource/{3}{2}{4}?server_type={5}".format(
+                uri,
+                instance_name,
+                resource_server_name,
+                method,
+                path,
+                server_type,
+            )
+        )
 
-            return isamAppliance.invoke_put(
-                "Updating an existing API Access Control Resource",
-                url, json_data, requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_put(
+            "Updating an existing API Access Control Resource",
+            url, json_data, requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -199,20 +208,32 @@ def delete(isamAppliance, instance_name, resource_server_name, method, path, ser
     if force is True or resource_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if tools.version_compare(isamAppliance.facts["version"], "10.0.0") < 0:
-                url = "{0}/{1}/server{2}/resource/{3}{4}?server_type={5}".format(uri, instance_name,
-                                                                                 resource_server_name,
-                                                                                 method, path, server_type)
-            else:
-                url = "{0}/{1}/server{2}/resource/{3}{2}{4}?server_type={5}".format(uri, instance_name,
-                                                                                    resource_server_name,
-                                                                                    method, path, server_type)
-            return isamAppliance.invoke_delete(
-                "Delete an existing API Access Control Resource",
-                url,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = (
+            "{0}/{1}/server{2}/resource/{3}{4}?server_type={5}".format(
+                uri,
+                instance_name,
+                resource_server_name,
+                method,
+                path,
+                server_type,
+            )
+            if tools.version_compare(isamAppliance.facts["version"], "10.0.0")
+            < 0
+            else "{0}/{1}/server{2}/resource/{3}{2}{4}?server_type={5}".format(
+                uri,
+                instance_name,
+                resource_server_name,
+                method,
+                path,
+                server_type,
+            )
+        )
+
+        return isamAppliance.invoke_delete(
+            "Delete an existing API Access Control Resource",
+            url,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -313,14 +334,13 @@ def export_all(isamAppliance, instance_name, resource_server_name, file_path, ch
     if force is True or server_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server{2}/resource?export=true".format(uri, instance_name, resource_server_name)
-            return isamAppliance.invoke_get_file(
-                "Exporting all existing API Access Control Resources",
-                url,
-                file_path,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = "{0}/{1}/server{2}/resource?export=true".format(uri, instance_name, resource_server_name)
+        return isamAppliance.invoke_get_file(
+            "Exporting all existing API Access Control Resources",
+            url,
+            file_path,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -351,22 +371,33 @@ def export_file(isamAppliance, instance_name, resource_server_name, method, path
     if force is True or resource_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if tools.version_compare(isamAppliance.facts["version"], "10.0.0") < 0:
-                url = "{0}/{1}/server{2}/resource/{3}{4}?export=true&server_type={5}".format(uri, instance_name,
-                                                                                             resource_server_name,
-                                                                                             method, path, server_type)
-            else:
-                url = "{0}/{1}/server{2}/resource/{3}{2}{4}?export=true&server_type={5}".format(uri, instance_name,
-                                                                                                resource_server_name,
-                                                                                                method, path,
-                                                                                                server_type)
-            return isamAppliance.invoke_get_file(
-                "Exporting an existing API Access Control Resource",
-                url,
-                file_path,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        url = (
+            "{0}/{1}/server{2}/resource/{3}{4}?export=true&server_type={5}".format(
+                uri,
+                instance_name,
+                resource_server_name,
+                method,
+                path,
+                server_type,
+            )
+            if tools.version_compare(isamAppliance.facts["version"], "10.0.0")
+            < 0
+            else "{0}/{1}/server{2}/resource/{3}{2}{4}?export=true&server_type={5}".format(
+                uri,
+                instance_name,
+                resource_server_name,
+                method,
+                path,
+                server_type,
+            )
+        )
+
+        return isamAppliance.invoke_get_file(
+            "Exporting an existing API Access Control Resource",
+            url,
+            file_path,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -395,20 +426,19 @@ def import_file(isamAppliance, instance_name, resource_server_name, filename,
     if force is True or server_exist is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            url = "{0}/{1}/server{2}/resource?server_type={3}".format(uri, instance_name,
-                                                                      resource_server_name, server_type)
+        url = "{0}/{1}/server{2}/resource?server_type={3}".format(uri, instance_name,
+                                                                  resource_server_name, server_type)
 
-            return isamAppliance.invoke_post_files(
-                "Importing an API Access Control Resource(s)", url,
-                [
-                    {
-                        'file_formfield': 'config_file',
-                        'filename': filename,
-                        'mimetype': 'application/octet-stream'
-                    }
-                ],
-                {}, requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_post_files(
+            "Importing an API Access Control Resource(s)", url,
+            [
+                {
+                    'file_formfield': 'config_file',
+                    'filename': filename,
+                    'mimetype': 'application/octet-stream'
+                }
+            ],
+            {}, requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -416,20 +446,26 @@ def import_file(isamAppliance, instance_name, resource_server_name, filename,
 def _check_instance_exist(isamAppliance, instance_name):
     ret_obj = ibmsecurity.isam.web.api_access_control.resources.instances.get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['name'] == instance_name:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == instance_name
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check_server_exist(isamAppliance, instance_name, junction_point):
     ret_obj = ibmsecurity.isam.web.api_access_control.resources.servers.get_all(isamAppliance, instance_name)
-    for obj in ret_obj['data']:
-        if obj['name'] == junction_point:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == junction_point
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check_resource_exist(isamAppliance, instance_name, resource_server_name, method, path):
@@ -439,31 +475,28 @@ def _check_resource_exist(isamAppliance, instance_name, resource_server_name, me
         path_name = path
     else:
         path_name = "{0}{1}".format(resource_server_name, path)
-    for obj in ret_obj['data']:
-        if obj['method'] == method and obj['path'] == path_name:
-            return True, warnings
-
-    return False, warnings
+    return next(
+        (
+            (True, warnings)
+            for obj in ret_obj['data']
+            if obj['method'] == method and obj['path'] == path_name
+        ),
+        (False, warnings),
+    )
 
 
 def _check_all_resource(isamAppliance, instance_name, resource_server_name):
     ret_obj = get_all(isamAppliance, instance_name, resource_server_name)
     warnings = ret_obj['warnings']
 
-    if ret_obj['data'] != []:
-        return True, warnings
-    else:
-        return False, warnings
+    return (True, warnings) if ret_obj['data'] != [] else (False, warnings)
 
 
 def _check_all_servers(isamAppliance, instance_name):
     ret_obj = ibmsecurity.isam.web.api_access_control.servers.get_all(isamAppliance, instance_name)
     warnings = ret_obj['warnings']
 
-    if ret_obj['data'] != []:
-        return True, warnings
-    else:
-        return False, warnings
+    return (True, warnings) if ret_obj['data'] != [] else (False, warnings)
 
 
 def _check_list_resource(isamAppliance, instance_name, resource_server_name, resources):
@@ -472,18 +505,12 @@ def _check_list_resource(isamAppliance, instance_name, resource_server_name, res
     non_exist = False
 
     for resource in resources:
-        found = False
-        for obj in ret_obj['data']:
-            if obj['id'] == resource:
-                found = True
-        if found is False:
+        found = any(obj['id'] == resource for obj in ret_obj['data'])
+        if not found:
             non_exist = True
             warnings.append("Did not find resource {0}".format(resource))
 
-    if non_exist is False:
-        return True, ret_obj['warnings']
-    else:
-        return False, warnings
+    return (True, ret_obj['warnings']) if non_exist is False else (False, warnings)
 
 
 def _check_list_servers(isamAppliance, instance_name, resource_servers):
@@ -492,18 +519,12 @@ def _check_list_servers(isamAppliance, instance_name, resource_servers):
     non_exist = False
 
     for server in resource_servers:
-        found = False
-        for obj in ret_obj['data']:
-            if obj['name'] == server:
-                found = True
-        if found is False:
+        found = any(obj['name'] == server for obj in ret_obj['data'])
+        if not found:
             non_exist = True
             warnings.append("Did not find resource server {0}".format(server))
 
-    if non_exist is False:
-        return True, ret_obj['warnings']
-    else:
-        return False, warnings
+    return (True, ret_obj['warnings']) if non_exist is False else (False, warnings)
 
 
 def _check_resource_content(isamAppliance, instance_name, resource_server_name, method, path, policy,
@@ -518,13 +539,12 @@ def _check_resource_content(isamAppliance, instance_name, resource_server_name, 
         'policy': policy,
         'cors_policy': cors_policy,
         'static_response_headers': static_response_headers,
-        'url_aliases': url_aliases
+        'url_aliases': url_aliases,
+        'path': path
+        if tools.version_compare(isamAppliance.facts["version"], "10.0.0") < 0
+        else "{0}{1}".format(resource_server_name, path),
     }
 
-    if tools.version_compare(isamAppliance.facts["version"], "10.0.0") < 0:
-        json_data['path'] = path
-    else:
-        json_data['path'] = "{0}{1}".format(resource_server_name, path)
 
     if name is not None:
         json_data['name'] = name
@@ -587,10 +607,7 @@ def compare(isamAppliance1, isamAppliance2):
                     if value.find("server_uuid") == -1 and \
                             value.find("current_requests") == -1 and \
                             value.find("total_requests") == -1:
-                        if new_str is None:
-                            new_str = value
-                        else:
-                            new_str = new_str + ";" + value
+                        new_str = value if new_str is None else f"{new_str};{value}"
                 srv['servers'] = new_str
             obj1.append(srv)
             resources1 = get_all(isamAppliance1, instance_name=inst1['name'], resource_server_name=srv['name'])
@@ -607,10 +624,7 @@ def compare(isamAppliance1, isamAppliance2):
                     if value.find("server_uuid") == -1 and \
                             value.find("current_requests") == -1 and \
                             value.find("total_requests") == -1:
-                        if new_str is None:
-                            new_str = value
-                        else:
-                            new_str = new_str + ";" + value
+                        new_str = value if new_str is None else f"{new_str};{value}"
                 srv['servers'] = new_str
             obj2.append(srv)
             resources2 = get_all(isamAppliance2, instance_name=inst2['name'], resource_server_name=srv['name'])

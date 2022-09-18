@@ -36,16 +36,15 @@ def disable(isamAppliance, check_mode=False, force=False):
     """
 
     check_disable, warnings = _check_disable(isamAppliance)
-    if force is True or check_disable is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete("Disabling SSL", module_uri,
-                                               requires_version=requires_version,
-                                               requires_modules=requires_module,
-                                               requires_model=requires_model)
-    else:
+    if force is not True and check_disable is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_delete("Disabling SSL", module_uri,
+                                           requires_version=requires_version,
+                                           requires_modules=requires_module,
+                                           requires_model=requires_model)
 
 
 def get(isamAppliance, check_mode=False, force=False):
@@ -88,15 +87,13 @@ def _check_enable(isamAppliance, keyfile=None):
     change_required = False
     check_obj = get(isamAppliance)
     warnings = check_obj['warnings']
-    # checks to see if ssl configuration exists
-
-    if 'enabled' in check_obj['data']:
-        if check_obj['data']['enabled'] is False:
-            return True, warnings
-        elif check_obj['data']['keyfile'] != keyfile:
-            return True, warnings
-        else:
-            return False, warnings
+    if 'enabled' not in check_obj['data']:
+        return False, warnings
+    if (
+        check_obj['data']['enabled'] is False
+        or check_obj['data']['keyfile'] != keyfile
+    ):
+        return True, warnings
     else:
         return False, warnings
 
@@ -109,11 +106,8 @@ def _check_disable(isamAppliance):
     check_obj = get(isamAppliance)
     warnings = check_obj['warnings']
 
-    if 'enabled' in check_obj['data']:
-        if check_obj['data']['enabled'] == True:
-            return True, warnings
-        else:
-            return False, warnings
+    if 'enabled' in check_obj['data'] and check_obj['data']['enabled'] == True:
+        return True, warnings
     else:
         return False, warnings
 

@@ -17,8 +17,11 @@ def get(isamAppliance, uuid, check_mode=False, force=False):
     """
     Retrieving a single interface
     """
-    return isamAppliance.invoke_get("Retrieving a single interface", "/net/ifaces/" + uuid,
-                                    requires_model=requires_model)
+    return isamAppliance.invoke_get(
+        "Retrieving a single interface",
+        f"/net/ifaces/{uuid}",
+        requires_model=requires_model,
+    )
 
 
 def _get_ipv4_addresses(isamAppliance, label, vlanId=None):
@@ -27,22 +30,21 @@ def _get_ipv4_addresses(isamAppliance, label, vlanId=None):
     """
     ret_obj = get_all(isamAppliance)
     warnings = ret_obj['warnings']
-    if warnings != []:
-        if 'Docker' in warnings[0]:
-            return [], warnings
+    if warnings != [] and 'Docker' in warnings[0]:
+        return [], warnings
 
-    i = None
-
-    for intfc in ret_obj['data']['interfaces']:
-        if intfc['label'] == label and intfc['vlanId'] == vlanId:
-            i = intfc
-            break
+    i = next(
+        (
+            intfc
+            for intfc in ret_obj['data']['interfaces']
+            if intfc['label'] == label and intfc['vlanId'] == vlanId
+        ),
+        None,
+    )
 
     ipv4_addresses = []
     if i is not None:
-        for ads in i['ipv4']['addresses']:
-            ipv4_addresses.append(ads['address'])
-
+        ipv4_addresses.extend(ads['address'] for ads in i['ipv4']['addresses'])
     return ipv4_addresses, warnings
 
 
@@ -62,24 +64,23 @@ def get_ipv6_addresses(isamAppliance, label, vlanId=None, check_mode=False, forc
     """
     ret_obj = get_all(isamAppliance)
     warnings = ret_obj['warnings']
-    if warnings != []:
-        if 'Docker' in warnings[0]:
-            ret_obj['data'] = []
-            ret_obj['warnings'] = warnings
-            return ret_obj
+    if warnings != [] and 'Docker' in warnings[0]:
+        ret_obj['data'] = []
+        ret_obj['warnings'] = warnings
+        return ret_obj
 
-    i = None
-
-    for intfc in ret_obj['data']['interfaces']:
-        if intfc['label'] == label and intfc['vlanId'] == vlanId:
-            i = intfc
-            break
+    i = next(
+        (
+            intfc
+            for intfc in ret_obj['data']['interfaces']
+            if intfc['label'] == label and intfc['vlanId'] == vlanId
+        ),
+        None,
+    )
 
     ipv6_addresses = []
     if i is not None:
-        for adds in i['ipv6']['addresses']:
-            ipv6_addresses.append(adds['address'])
-
+        ipv6_addresses.extend(adds['address'] for adds in i['ipv6']['addresses'])
     ret_obj = isamAppliance.create_return_object()
     ret_obj['data'] = ipv6_addresses
 
@@ -93,15 +94,17 @@ def _get_interface(isamAppliance, label, vlanId=None, check_mode=False, force=Fa
     ret_obj = get_all(isamAppliance)
     warnings = ret_obj['warnings']
 
-    if warnings != []:
-        if 'Docker' in warnings[0]:
-            return None, warnings
+    if warnings != [] and 'Docker' in warnings[0]:
+        return None, warnings
 
-    for intfc in ret_obj['data']['interfaces']:
-        if intfc['label'] == label and intfc['vlanId'] == vlanId:
-            return intfc, warnings
-
-    return None, warnings
+    return next(
+        (
+            (intfc, warnings)
+            for intfc in ret_obj['data']['interfaces']
+            if intfc['label'] == label and intfc['vlanId'] == vlanId
+        ),
+        (None, warnings),
+    )
 
 
 def search(isamAppliance, label=None, vlanId=None, address=None, check_mode=False, force=False):
@@ -112,26 +115,23 @@ def search(isamAppliance, label=None, vlanId=None, address=None, check_mode=Fals
 
     if label is not None:
         intf, warnings = _get_interface(isamAppliance, label, vlanId, check_mode, force)
-        if warnings != []:
-            if 'Docker' in warnings[0]:
-                ret_obj['data'] = []
-                ret_obj['warnings'] = warnings
-                return ret_obj
-        if intf == []:
+        if warnings != [] and 'Docker' in warnings[0]:
             ret_obj['data'] = []
             ret_obj['warnings'] = warnings
             return ret_obj
+        if intf == []:
+            ret_obj['data'] = []
+            ret_obj['warnings'] = warnings
         else:
             ret_obj['data'] = intf['uuid']
-            return ret_obj
+        return ret_obj
     elif address is not None:
         objs = get_all(isamAppliance)
         warnings = objs['warnings']
-        if warnings != []:
-            if 'Docker' in warnings[0]:
-                ret_obj['data'] = []
-                ret_obj['warnings'] = warnings
-                return ret_obj
+        if warnings != [] and 'Docker' in warnings[0]:
+            ret_obj['data'] = []
+            ret_obj['warnings'] = warnings
+            return ret_obj
         for intfc in objs['data']['interfaces']:
             for adds in intfc['ipv4']['addresses']:
                 if adds['address'] == address:
@@ -153,13 +153,11 @@ def compare(isamAppliance1, isamAppliance2):
     ret_obj1 = get_all(isamAppliance1)
     ret_obj2 = get_all(isamAppliance2)
 
-    if ret_obj1['warnings'] != []:
-        if "Docker" in ret_obj1['warnings'][0]:
-            return isamAppliance1.create_return_object(warnings=ret_obj1['warnings'])
+    if ret_obj1['warnings'] != [] and "Docker" in ret_obj1['warnings'][0]:
+        return isamAppliance1.create_return_object(warnings=ret_obj1['warnings'])
 
-    if ret_obj2['warnings'] != []:
-        if "Docker" in ret_obj2['warnings'][0]:
-            return isamAppliance1.create_return_object(warnings=ret_obj1['warnings'])
+    if ret_obj2['warnings'] != [] and "Docker" in ret_obj2['warnings'][0]:
+        return isamAppliance1.create_return_object(warnings=ret_obj1['warnings'])
 
     for intfc in ret_obj1['data']['interfaces']:
         del intfc['uuid']

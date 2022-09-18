@@ -20,12 +20,11 @@ def search(isamAppliance, realm, subsection, check_mode=False, force=False):
     return_obj["warnings"] = ret_obj["warnings"]
 
     for obj in ret_obj['data']:
-        if obj['type'] == "section":
-            if obj['name'] == subsection:
-                logger.info("Found Kerberos realm subsection {0} id: {1}".format(subsection, obj['id']))
-                return_obj['data'] = obj
-                return_obj['rc'] = 0
-                break
+        if obj['type'] == "section" and obj['name'] == subsection:
+            logger.info("Found Kerberos realm subsection {0} id: {1}".format(subsection, obj['id']))
+            return_obj['data'] = obj
+            return_obj['rc'] = 0
+            break
 
     return return_obj
 
@@ -43,10 +42,9 @@ def _check(isamAppliance, realm, subsection):
 
     logger.debug("Looking for existing kerberos subsection: {1} in realm: {0} in: {2}".format(realm, subsection,
                                                                                               ret_obj['data']))
-    if ret_obj['data'] != {}:
-        if ret_obj['data']['name'] == subsection:
-            logger.debug("Found kerberos realm's subsection: {0}".format(subsection))
-            return True
+    if ret_obj['data'] != {} and ret_obj['data']['name'] == subsection:
+        logger.debug("Found kerberos realm's subsection: {0}".format(subsection))
+        return True
     return False
 
 
@@ -93,10 +91,9 @@ def delete(isamAppliance, realm, subsection, check_mode=False, force=False):
 
     if _check(isamAppliance, realm, subsection) is False and force is False:
         return isamAppliance.create_return_object(warnings=["subsection: {0} not found".format(subsection)])
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(description="Delete kerberos realm subsection ",
-                                               uri="{0}/{1}/{2}".format(uri, realm, subsection),
-                                               requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_delete(description="Delete kerberos realm subsection ",
+                                           uri="{0}/{1}/{2}".format(uri, realm, subsection),
+                                           requires_modules=requires_modules, requires_version=requires_version)

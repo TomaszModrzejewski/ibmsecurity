@@ -26,11 +26,7 @@ def set(isamAppliance, primaryServer=None, secondaryServer=None, tertiaryServer=
     """
 
     if isinstance(auto, basestring):
-        if auto.lower() == 'true':
-            auto = True
-        else:
-            auto = False
-
+        auto = auto.lower() == 'true'
     # check autoFromInterface. If it is a label replace it with corresponding interface UUID, else leave it untouched (treat as UUID)
     if autoFromInterface is not None:
       ret_obj = ibmsecurity.isam.base.network.interfaces.get_all(isamAppliance)
@@ -98,12 +94,11 @@ def _check(isamAppliance, primaryServer, secondaryServer, tertiaryServer, search
         'searchDomains': searchDomains
     }
 
-    if ibmsecurity.utilities.tools.json_sort(ret_obj['data']) == ibmsecurity.utilities.tools.json_sort(check_json_data):
-        check_value=True
-        return check_value,warnings
-    else:
-        check_value = False
-        return check_value,warnings
+    check_value = ibmsecurity.utilities.tools.json_sort(
+        ret_obj['data']
+    ) == ibmsecurity.utilities.tools.json_sort(check_json_data)
+
+    return check_value,warnings
 
 
 def compare(isamAppliance1, isamAppliance2):

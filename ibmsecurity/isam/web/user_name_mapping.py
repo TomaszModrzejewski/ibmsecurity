@@ -28,17 +28,15 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name, check_mode=False, force=False)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings = ["Retrieving a User Mapping CDAS file " + name + " does not exist"]
-        logger.info("Retrieving a User Mapping CDAS file " + name + " does not exist")
-        return isamAppliance.create_return_object(warnings=warnings)
-
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieving a User Mapping CDAS file",
                                         "{0}/{1}".format(uri, id),
                                         requires_modules=requires_modules,
                                         requires_version=requires_version
                                         )
+    warnings = [f"Retrieving a User Mapping CDAS file {name} does not exist"]
+    logger.info(f"Retrieving a User Mapping CDAS file {name} does not exist")
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def get_template(isamAppliance, check_mode=False, force=False):
@@ -117,33 +115,32 @@ def update(isamAppliance, name, filepath=None, contents=None, check_mode=False, 
         update_required = False
         logger.info("Did not find {0}".format(name))
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if format == "file":
-                return isamAppliance.invoke_post_files(
-                    "Updating an existing User Mapping CDAS file with new file",
-                    "{0}/{1}".format(uri, name),
-                    [
-                        {
-                            'file_formfield': 'file',
-                            'filename': filepath,
-                            'mimetype': 'application/octet-stream'
-                        }
-                    ],
-                    {},
-                    requires_modules=requires_modules, requires_version=requires_version
-                )
-            else:
-                return isamAppliance.invoke_post(
-                    "Updating an existing User Mapping CDAS file with new file",
-                    "{0}/{1}".format(uri, name),
+        if format == "file":
+            return isamAppliance.invoke_post_files(
+                "Updating an existing User Mapping CDAS file with new file",
+                "{0}/{1}".format(uri, name),
+                [
                     {
-                        'content': contents
-                    },
-                    requires_modules=requires_modules, requires_version=requires_version
-                )
+                        'file_formfield': 'file',
+                        'filename': filepath,
+                        'mimetype': 'application/octet-stream'
+                    }
+                ],
+                {},
+                requires_modules=requires_modules, requires_version=requires_version
+            )
+        else:
+            return isamAppliance.invoke_post(
+                "Updating an existing User Mapping CDAS file with new file",
+                "{0}/{1}".format(uri, name),
+                {
+                    'content': contents
+                },
+                requires_modules=requires_modules, requires_version=requires_version
+            )
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -204,18 +201,17 @@ def export_file(isamAppliance, name, filepath, check_mode=False, force=False):
         warnings = ["File '{0}' already exists.  Skipping export.".format(filepath)]
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or id != {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-
-            return isamAppliance.invoke_get_file(
-                "Exporting a User Mapping CDAS file",
-                "{0}/{1}?export".format(uri, name), filepath,
-                requires_modules=requires_modules, requires_version=requires_version
-            )
-
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_get_file(
+            "Exporting a User Mapping CDAS file",
+            "{0}/{1}?export".format(uri, name),
+            filepath,
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+        )
+    )
 
 
 def import_file(isamAppliance, filepath, check_mode=False, force=False):
@@ -237,24 +233,24 @@ def import_file(isamAppliance, filepath, check_mode=False, force=False):
         warnings = ["User Mapping CDAS file name '{0}' already exists.  Skipping import file.".format(filename)]
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or id == {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_post_files(
-                "Importing a User Mapping CDAS file",
-                "{0}/".format(uri),
-                [
-                    {
-                        'file_formfield': 'file',
-                        'filename': filepath,
-                        'mimetype': 'application/octet-stream'
-                    }
-                ],
-                {},
-                requires_modules=requires_modules, requires_version=requires_version
-            )
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_post_files(
+            "Importing a User Mapping CDAS file",
+            "{0}/".format(uri),
+            [
+                {
+                    'file_formfield': 'file',
+                    'filename': filepath,
+                    'mimetype': 'application/octet-stream',
+                }
+            ],
+            {},
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+        )
+    )
 
 
 def rename(isamAppliance, name, new_name, check_mode=False, force=False):
@@ -275,19 +271,17 @@ def rename(isamAppliance, name, new_name, check_mode=False, force=False):
             "User Mapping CDAS file name '{0}' and new name {1} are the same.  Skipping rename.".format(name, new_name))
         return isamAppliance.create_return_object()
 
-    if force is True or id != {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-
-            return isamAppliance.invoke_put(
-                "Renaming a User Mapping CDAS file",
-                "{0}/{1}".format(uri, name),
-                {"new_name": new_name},
-                requires_modules=requires_modules, requires_version=requires_version
-            )
-
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_put(
+            "Renaming a User Mapping CDAS file",
+            "{0}/{1}".format(uri, name),
+            {"new_name": new_name},
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+        )
+    )
 
 
 def compare(isamAppliance1, isamAppliance2):

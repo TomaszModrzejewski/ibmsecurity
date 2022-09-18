@@ -26,12 +26,11 @@ def get(isamAppliance, app_id, check_mode=False, force=False):
     ret_obj = search(isamAppliance, app_id, check_mode=False, force=False)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("Push notification registration '{0}' had no match, skipping retrieval.".format(app_id))
-        warnings = ["Push notification registration '{0}' had no match, skipping retrieval.".format(app_id)]
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("Push notification registration '{0}' had no match, skipping retrieval.".format(app_id))
+    warnings = ["Push notification registration '{0}' had no match, skipping retrieval.".format(app_id)]
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def add(isamAppliance, app_id, platform, provider, check_mode=False, force=False):
@@ -77,12 +76,9 @@ def update(isamAppliance, app_id, platform, provider, new_app_id=None, check_mod
 
         json_data = {
             'platform': platform,
-            'provider': provider
+            'provider': provider,
+            'app_id': (new_app_id,) if new_app_id is not None else app_id,
         }
-        if new_app_id is not None:
-            json_data['app_id'] = new_app_id,
-        else:
-            json_data['app_id'] = app_id
 
         sorted_json_data = json_sort(json_data)
 
@@ -103,7 +99,7 @@ def update(isamAppliance, app_id, platform, provider, new_app_id=None, check_mod
         warnings = ["Push notification registration '{0}' does not exists.  Skipping update.".format(app_id)]
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
@@ -143,18 +139,18 @@ def delete(isamAppliance, app_id, check_mode=False, force=False):
     id = ret_obj['data']
 
     if force is True or id != {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-
-            return isamAppliance.invoke_delete(
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_delete(
                 "Delete a push notification registration",
                 "{0}/{1}".format(uri, id),
-                requires_modules=requires_modules, requires_version=requires_version
+                requires_modules=requires_modules,
+                requires_version=requires_version,
             )
+        )
 
-    if id == {}:
-        logger.info("Push notification registration '{0}' does not exists, skipping delete.".format(app_id))
+    logger.info("Push notification registration '{0}' does not exists, skipping delete.".format(app_id))
 
     return isamAppliance.create_return_object()
 

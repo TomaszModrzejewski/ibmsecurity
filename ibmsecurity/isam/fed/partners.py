@@ -18,11 +18,10 @@ def get_all(isamAppliance, federation_name, count=None, start=None, check_mode=F
                                                       force=force)
     fed_id = ret_obj['data']
 
-    if fed_id == {}:
-        logger.info("Federation {0}, not found. Skipping get.".format(federation_name))
-        return isamAppliance.create_return_object()
-    else:
+    if fed_id != {}:
         return _get_all(isamAppliance, fed_id, tools.create_query_string(count=count, start=start))
+    logger.info("Federation {0}, not found. Skipping get.".format(federation_name))
+    return isamAppliance.create_return_object()
 
 
 def _get_all(isamAppliance, fed_id, query_str=''):
@@ -39,12 +38,11 @@ def get(isamAppliance, federation_name, partner_name, check_mode=False, force=Fa
     ret_obj = search(isamAppliance, federation_name, partner_name, check_mode=check_mode, force=force)
     fed_id, partner_id = ret_obj['data']
 
-    if fed_id == {} or partner_id is None:
-        logger.info(
-            "Federation/Partner {0}/{1} had no match, skipping retrieval.".format(federation_name, partner_name))
-        return isamAppliance.create_return_object()
-    else:
+    if fed_id != {} and partner_id is not None:
         return _get(isamAppliance, fed_id, partner_id)
+    logger.info(
+        "Federation/Partner {0}/{1} had no match, skipping retrieval.".format(federation_name, partner_name))
+    return isamAppliance.create_return_object()
 
 
 def _get(isamAppliance, federation_id, partner_id):
@@ -99,23 +97,22 @@ def import_metadata(isamAppliance, federation_name, filename, partner_name=None,
         if force is True or partner_id is None:
             if check_mode is True:
                 return isamAppliance.create_return_object(changed=True)
-            else:
-                json_data = {}
-                # Override partner name in metadata file - if provided
-                if partner_name is not None:
-                    json_data['name'] = partner_name
-                return isamAppliance.invoke_post_files(
-                    "Import a new partner",
-                    "{0}/{1}/partners/metadata".format(uri, fed_id),
-                    [
-                        {
-                            'file_formfield': 'metadata',
-                            'filename': filename,
-                            'mimetype': 'application/octet-stream'
-                        }
-                    ], json_data,
-                    requires_modules=requires_modules,
-                    requires_version=requires_version)
+            json_data = {}
+            # Override partner name in metadata file - if provided
+            if partner_name is not None:
+                json_data['name'] = partner_name
+            return isamAppliance.invoke_post_files(
+                "Import a new partner",
+                "{0}/{1}/partners/metadata".format(uri, fed_id),
+                [
+                    {
+                        'file_formfield': 'metadata',
+                        'filename': filename,
+                        'mimetype': 'application/octet-stream'
+                    }
+                ], json_data,
+                requires_modules=requires_modules,
+                requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -130,15 +127,14 @@ def set(isamAppliance, federation_name, partner_name, enabled, role, configurati
 
     if fed_id == {}:
         logger.info("Federation {0} not found, skipping add/update.".format(federation_name))
+    elif partner_id is None:
+        # Force the add - we already know partner does not exist
+        return add(isamAppliance, federation_name, partner_name, enabled, role, configuration, templateName,
+                   check_mode, True)
     else:
-        if partner_id is None:
-            # Force the add - we already know partner does not exist
-            return add(isamAppliance, federation_name, partner_name, enabled, role, configuration, templateName,
-                       check_mode, True)
-        else:
-            # Update request
-            return update(isamAppliance, federation_name, partner_name, enabled, configuration, role, templateName,
-                          new_name, check_mode, force)
+        # Update request
+        return update(isamAppliance, federation_name, partner_name, enabled, configuration, role, templateName,
+                      new_name, check_mode, force)
 
 
 def add(isamAppliance, federation_name, partner_name, enabled, role, configuration, templateName=None, check_mode=False,
@@ -158,20 +154,19 @@ def add(isamAppliance, federation_name, partner_name, enabled, role, configurati
         if force is True or partner_id is None:
             if check_mode is True:
                 return isamAppliance.create_return_object(changed=True)
-            else:
-                json_data = {
-                    "name": partner_name,
-                    "enabled": enabled,
-                    "role": role,
-                    "configuration": configuration
-                }
-                if templateName is not None:
-                    json_data['templateName'] = templateName
-                return isamAppliance.invoke_post(
-                    "Create a new partner",
-                    "{0}/{1}/partners".format(uri, fed_id), json_data,
-                    requires_modules=requires_modules,
-                    requires_version=requires_version)
+            json_data = {
+                "name": partner_name,
+                "enabled": enabled,
+                "role": role,
+                "configuration": configuration
+            }
+            if templateName is not None:
+                json_data['templateName'] = templateName
+            return isamAppliance.invoke_post(
+                "Create a new partner",
+                "{0}/{1}/partners".format(uri, fed_id), json_data,
+                requires_modules=requires_modules,
+                requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -188,15 +183,14 @@ def delete(isamAppliance, federation_name, partner_name, check_mode=False, force
     else:
         if partner_id is None:
             logger.info("In federation: {0}, Partner {1} no longer exists.".format(federation_name, partner_name))
+        elif check_mode is True:
+            return isamAppliance.create_return_object(changed=True)
         else:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True)
-            else:
-                return isamAppliance.invoke_delete(
-                    "Delete a partner",
-                    "{0}/{1}/partners/{2}".format(uri, fed_id, partner_id),
-                    requires_modules=requires_modules,
-                    requires_version=requires_version)
+            return isamAppliance.invoke_delete(
+                "Delete a partner",
+                "{0}/{1}/partners/{2}".format(uri, fed_id, partner_id),
+                requires_modules=requires_modules,
+                requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -245,10 +239,7 @@ def _check(isamAppliance, federation_name, partner_name, enabled, configuration,
             from ibmsecurity.appliance.ibmappliance import IBMError
             raise IBMError("999", "Search() found partner, but get() failed. Something seriously wrong!")
         else:
-            if new_name is not None:
-                json_data['name'] = new_name
-            else:
-                json_data['name'] = partner_name
+            json_data['name'] = new_name if new_name is not None else partner_name
             # Only added parameters passed, remove everything else
             if role is not None:
                 json_data['role'] = role
@@ -291,11 +282,13 @@ def _check(isamAppliance, federation_name, partner_name, enabled, configuration,
                 if exist_map_rule_id is None and exist_map_rule is not None:
                     import ibmsecurity.isam.aac.mapping_rules
                     new_map_obj = ibmsecurity.isam.aac.mapping_rules._get(isamAppliance, new_map_rule_id)
-                    if new_map_obj['data'] != {}:
-                        if new_map_obj['data']['content'].strip() != exist_map_rule.strip():
-                            logger.info("Mapping Rule is different, need to update.")
-                            return fed_id, True, json_data
-                # Allow mapping rule id to be compared - not actual rules contents
+                    if (
+                        new_map_obj['data'] != {}
+                        and new_map_obj['data']['content'].strip()
+                        != exist_map_rule.strip()
+                    ):
+                        logger.info("Mapping Rule is different, need to update.")
+                        return fed_id, True, json_data
                 elif exist_map_rule_id is not None:
                     logger.debug("Comapring mapping rule ids and ignoring actual rule contents.")
                     if exist_map_rule is not None:

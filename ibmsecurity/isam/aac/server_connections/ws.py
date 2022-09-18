@@ -25,14 +25,13 @@ def get(isamAppliance, name=None, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, force=force)
     id = ret_obj["data"]
 
-    if id == {}:
-        logger.info("Web Service connection {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieving a Web Service connection",
                                         "{0}/{1}/v1".format(uri, id),
                                         requires_modules=requires_modules,
                                         requires_version=requires_version)
+    logger.info("Web Service connection {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, name, check_mode=False, force=False):
@@ -113,10 +112,9 @@ def update(isamAppliance, name, connection, description='', locked=False, new_na
     if force is not True:
         if 'uuid' in ret_obj['data']:
             del ret_obj['data']['uuid']
-        if ignore_password_for_idempotency:
-            if 'password' in connection:
-                warnings.append("Request made to ignore password for idempotency check.")
-                connection.pop('password', None)
+        if ignore_password_for_idempotency and 'password' in connection:
+            warnings.append("Request made to ignore password for idempotency check.")
+            connection.pop('password', None)
 
         sorted_ret_obj = tools.json_sort(ret_obj['data'])
         sorted_json_data = tools.json_sort(json_data)
@@ -129,7 +127,7 @@ def update(isamAppliance, name, connection, description='', locked=False, new_na
             warnings.append("Since existing password cannot be read - this call will not be idempotent.")
             needs_update = True
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -160,15 +158,13 @@ def _create_json(name, description, locked, connection):
     Create a JSON to be used for the REST API call
     """
 
-    json = {
+    return {
         "connection": connection,
         "type": "ws",
         "name": name,
         "description": description,
-        "locked": locked
+        "locked": locked,
     }
-
-    return json
 
 
 def compare(isamAppliance1, isamAppliance2):
@@ -192,8 +188,8 @@ def _check_exists(isamAppliance, name=None, id=None):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if (name is not None and obj['name'] == name) or (id is not None and obj['uuid'] == id):
-            return True
-
-    return False
+    return any(
+        (name is not None and obj['name'] == name)
+        or (id is not None and obj['uuid'] == id)
+        for obj in ret_obj['data']
+    )

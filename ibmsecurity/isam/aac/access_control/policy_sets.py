@@ -22,12 +22,11 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     pol_id = ret_obj['data']
 
-    if pol_id == {}:
-        logger.info("Policy {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if pol_id != {}:
         return isamAppliance.invoke_get("Retrieve a specific policy set",
                                         "{0}/{1}".format(uri, pol_id))
+    logger.info("Policy {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def get_policies(isamAppliance, name, check_mode=False, force=False):
@@ -37,12 +36,11 @@ def get_policies(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     pol_id = ret_obj['data']
 
-    if pol_id == {}:
-        logger.info("Policy {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if pol_id != {}:
         return isamAppliance.invoke_get("Retrieve policies in a specific policy set",
                                         "{0}/{1}/policies".format(uri, pol_id))
+    logger.info("Policy {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def search(isamAppliance, name, force=False, check_mode=False):
@@ -92,18 +90,17 @@ def add(isamAppliance, name, policies=None, policyCombiningAlgorithm='denyOverri
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "description": description,
-                "predefined": predefined
-            }
-            if policies is not None:
-                json_data['policies'] = _convert_policy_name_to_id(isamAppliance, policies)
-            if policyCombiningAlgorithm is not None:
-                json_data['policyCombiningAlgorithm'] = policyCombiningAlgorithm
-            return isamAppliance.invoke_post(
-                "Create a new Policy Set", uri, json_data)
+        json_data = {
+            "name": name,
+            "description": description,
+            "predefined": predefined
+        }
+        if policies is not None:
+            json_data['policies'] = _convert_policy_name_to_id(isamAppliance, policies)
+        if policyCombiningAlgorithm is not None:
+            json_data['policyCombiningAlgorithm'] = policyCombiningAlgorithm
+        return isamAppliance.invoke_post(
+            "Create a new Policy Set", uri, json_data)
 
     return isamAppliance.create_return_object()
 
@@ -147,13 +144,12 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if pol_id == {}:
         logger.info("Policy Set {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a Policy Set",
-                "{0}/{1}".format(uri, pol_id))
+        return isamAppliance.invoke_delete(
+            "Delete a Policy Set",
+            "{0}/{1}".format(uri, pol_id))
 
     return isamAppliance.create_return_object()
 
@@ -199,10 +195,7 @@ def _check(isamAppliance, name, policies, policyCombiningAlgorithm, description,
         return None, update_required, json_data
     else:
         pol_id = ret_obj['data']['id']
-        if new_name is not None:
-            json_data['name'] = new_name
-        else:
-            json_data['name'] = name
+        json_data['name'] = new_name if new_name is not None else name
         if policies is not None:
             json_data['policies'] = _convert_policy_name_to_id(isamAppliance, policies)
         else:
@@ -272,10 +265,7 @@ def _check_policies(isamAppliance, name, policies, action):
             pol_ids = new_pol_ids
         else:
             for new_pol_id in new_pol_ids:
-                if new_pol_id in ret_obj['data']['policies']:
-                    exists = True
-                else:
-                    exists = False
+                exists = new_pol_id in ret_obj['data']['policies']
                 if action == 'add':
                     if exists:
                         logger.info("Policy ID {0} already exists skipping.".format(new_pol_id))

@@ -18,10 +18,7 @@ class ISAMAppliance(IBMAppliance):
     def __init__(self, hostname, user, lmi_port=443, cert=None):
         self.logger = logging.getLogger(__name__)
         self.logger.debug('Creating an ISAMAppliance')
-        if isinstance(lmi_port, basestring):
-            self.lmi_port = int(lmi_port)
-        else:
-            self.lmi_port = lmi_port
+        self.lmi_port = int(lmi_port) if isinstance(lmi_port, basestring) else lmi_port
         self.session = requests.session()
         if cert is None:
             self.logger.debug('Cert object is None, using BA Auth with userid/password.')
@@ -33,14 +30,14 @@ class ISAMAppliance(IBMAppliance):
 
     def _url(self, uri):
         # Build up the URL
-        url = "https://" + self.hostname + ":" + str(self.lmi_port) + uri
-        self.logger.debug("Issuing request to: " + url)
+        url = f"https://{self.hostname}:{str(self.lmi_port)}{uri}"
+        self.logger.debug(f"Issuing request to: {url}")
 
         return url
 
     def _log_desc(self, description):
         if description != "":
-            self.logger.info('*** ' + description + ' ***')
+            self.logger.info(f'*** {description} ***')
 
     def _suppress_ssl_warning(self):
         # Disable https warning because of non-standard certs on appliance
@@ -59,15 +56,14 @@ class ISAMAppliance(IBMAppliance):
             self.logger.error("  Request failed: ")
             self.logger.error("     status code: {0}".format(http_response.status_code))
             if http_response.text != "":
-                self.logger.error("     text: " + http_response.text)
+                self.logger.error(f"     text: {http_response.text}")
             # Unconditionally raise exception to abort execution
             raise IBMFatal("HTTP Return code: {0}".format(http_response.status_code), http_response.text)
-        elif (
-                http_response.status_code != 200 and http_response.status_code != 204 and http_response.status_code != 201):
+        elif http_response.status_code not in [200, 204, 201]:
             self.logger.error("  Request failed: ")
             self.logger.error("     status code: {0}".format(http_response.status_code))
             if http_response.text != "":
-                self.logger.error("     text: " + http_response.text)
+                self.logger.error(f"     text: {http_response.text}")
             if not ignore_error:
                 raise IBMError("HTTP Return code: {0}".format(http_response.status_code), http_response.text)
             return_obj['changed'] = False  # force changed to be False as there is an error
@@ -102,20 +98,28 @@ class ISAMAppliance(IBMAppliance):
         # flag to indicate if processing needs to return and not continue
         return_call = False
         self.logger.debug("Checking for deployment model {0}.".format(requires_model))
-        if requires_model is not None and 'model' in self.facts and self.facts['model'] is not None:
-            if self.facts['model'] != requires_model:
-                return_call = True
-                warnings.append(
-                    "API invoked requires model: {0}, appliance is of deployment model: {1}.".format(
-                        requires_model, self.facts['model']))
+        if (
+            requires_model is not None
+            and 'model' in self.facts
+            and self.facts['model'] is not None
+            and self.facts['model'] != requires_model
+        ):
+            return_call = True
+            warnings.append(
+                "API invoked requires model: {0}, appliance is of deployment model: {1}.".format(
+                    requires_model, self.facts['model']))
 
         self.logger.debug("Checking for minimum version: {0}.".format(requires_version))
-        if requires_version is not None and 'version' in self.facts and self.facts['version'] is not None:
-            if tools.version_compare(self.facts['version'], requires_version) < 0:
-                return_call = True
-                warnings.append(
-                    "API invoked requires minimum version: {0}, appliance is of lower version: {1}.".format(
-                        requires_version, self.facts['version']))
+        if (
+            requires_version is not None
+            and 'version' in self.facts
+            and self.facts['version'] is not None
+            and tools.version_compare(self.facts['version'], requires_version) < 0
+        ):
+            return_call = True
+            warnings.append(
+                "API invoked requires minimum version: {0}, appliance is of lower version: {1}.".format(
+                    requires_version, self.facts['version']))
         # Detecting modules from uri if none is provided
         if requires_modules is None and not requires_modules:
             if uri.startswith("/wga"):
@@ -128,15 +132,17 @@ class ISAMAppliance(IBMAppliance):
         self.logger.debug("Checking for one of required modules: {0}.".format(requires_modules))
         if requires_modules is not None and requires_modules:
             if 'activations' in self.facts and self.facts['activations']:
-                # Find intersection of the two lists
-                iactive = [ia for ia in self.facts['activations'] if ia in requires_modules]
-                if not iactive:
+                if iactive := [
+                    ia
+                    for ia in self.facts['activations']
+                    if ia in requires_modules
+                ]:
+                    self.logger.info("Modules satisfying requirement: {0}".format(iactive))
+                else:
                     return_call = True
                     warnings.append(
                         "API invoked requires one of modules: {0}, appliance has these modules active: {1}.".format(
                             requires_modules, self.facts['activations']))
-                else:
-                    self.logger.info("Modules satisfying requirement: {0}".format(iactive))
             else:
                 return_call = True
                 warnings.append("API invoked requires module: {0}, appliance has no modules active.".format(
@@ -172,11 +178,18 @@ class ISAMAppliance(IBMAppliance):
         self.logger.debug("Headers are: {0}".format(headers))
 
         if data_as_files is False:
-            files = list()
-            for file2post in fileinfo:
-                files.append((file2post['file_formfield'],
-                              (tools.path_leaf(file2post['filename']), open(file2post['filename'], 'rb'),
-                               file2post['mimetype'])))
+            files = [
+                (
+                    file2post['file_formfield'],
+                    (
+                        tools.path_leaf(file2post['filename']),
+                        open(file2post['filename'], 'rb'),
+                        file2post['mimetype'],
+                    ),
+                )
+                for file2post in fileinfo
+            ]
+
         else:
             files = data
 
@@ -220,11 +233,18 @@ class ISAMAppliance(IBMAppliance):
         }
         self.logger.debug("Headers are: {0}".format(headers))
 
-        files = list()
+        files = [
+            (
+                file2post['file_formfield'],
+                (
+                    file2post['filename'],
+                    open(file2post['filename'], 'rb'),
+                    file2post['mimetype'],
+                ),
+            )
+            for file2post in fileinfo
+        ]
 
-        for file2post in fileinfo:
-            files.append((file2post['file_formfield'],
-                          (file2post['filename'], open(file2post['filename'], 'rb'), file2post['mimetype'])))
 
         self._suppress_ssl_warning()
 
@@ -271,33 +291,32 @@ class ISAMAppliance(IBMAppliance):
         try:
             r = self.session.get(url=self._url(uri=uri), verify=False, stream=True, headers=headers)
 
-            if (r.status_code != 200 and r.status_code != 204 and r.status_code != 201):
+            if r.status_code not in [200, 204, 201]:
                 self.logger.error("  Request failed: ")
                 self.logger.error("     status code: {0}".format(r.status_code))
                 if r.text != "":
-                    self.logger.error("     text: " + r.text)
+                    self.logger.error(f"     text: {r.text}")
                 if not ignore_error:
                     raise IBMError("HTTP Return code: {0}".format(r.status_code), r.text)
-                else:
-                    return_obj['rc'] = r.status_code
-                    return_obj['data'] = {'msg': 'Unable to extract contents to file!'}
+                return_obj['rc'] = r.status_code
+                return_obj['data'] = {'msg': 'Unable to extract contents to file!'}
             else:
                 with open(filename, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:  # filter out keep-alive new chunks
                             f.write(chunk)
                 return_obj['rc'] = 0
-                return_obj['data'] = {'msg': 'Contents extracted to file: ' + filename}
+                return_obj['data'] = {'msg': f'Contents extracted to file: {filename}'}
 
         except requests.exceptions.ConnectionError:
             self._process_connection_error(ignore_error=ignore_error, return_obj=return_obj)
 
         except IOError:
             if not ignore_error:
-                self.logger.critical("Failed to write to file: " + filename)
-                raise IBMError("HTTP Return code: 999", "Failed to write to file: " + filename)
+                self.logger.critical(f"Failed to write to file: {filename}")
+                raise IBMError("HTTP Return code: 999", f"Failed to write to file: {filename}")
             else:
-                self.logger.debug("Failed to write to file: " + filename)
+                self.logger.debug(f"Failed to write to file: {filename}")
                 return_obj['rc'] = 999
 
         return return_obj
@@ -327,12 +346,12 @@ class ISAMAppliance(IBMAppliance):
         # Process the input data into JSON
         json_data = json.dumps(data)
 
-        self.logger.debug("Input Data: " + json_data)
+        self.logger.debug(f"Input Data: {json_data}")
 
         self._suppress_ssl_warning()
 
         try:
-            if func == self.session.get or func == self.session.delete:
+            if func in [self.session.get, self.session.delete]:
 
                 if data != {}:
                     r = func(url=self._url(uri), data=json_data, verify=False, headers=headers)
@@ -372,12 +391,12 @@ class ISAMAppliance(IBMAppliance):
         # Process the input data into JSON
         json_data = json.dumps(data)
 
-        self.logger.debug("Input Data: " + json_data)
+        self.logger.debug(f"Input Data: {json_data}")
 
         self._suppress_ssl_warning()
 
         try:
-            if func == self.session.get or func == self.session.delete:
+            if func in [self.session.get, self.session.delete]:
 
                 if data != {}:
                     r = func(url=self._url(uri), data=json_data, verify=False, headers=headers)
@@ -404,11 +423,17 @@ class ISAMAppliance(IBMAppliance):
         """
 
         self._log_request("PUT", uri, description)
-        response = self._invoke_request(self.session.put, description, uri,
-                                        ignore_error, data,
-                                        requires_modules=requires_modules, requires_version=requires_version,
-                                        requires_model=requires_model, warnings=warnings)
-        return response
+        return self._invoke_request(
+            self.session.put,
+            description,
+            uri,
+            ignore_error,
+            data,
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+            requires_model=requires_model,
+            warnings=warnings,
+        )
 
     def invoke_post(self, description, uri, data, ignore_error=False, requires_modules=None, requires_version=None,
                     warnings=[], requires_model=None):
@@ -417,12 +442,17 @@ class ISAMAppliance(IBMAppliance):
         """
 
         self._log_request("POST", uri, description)
-        response = self._invoke_request(self.session.post, description, uri,
-                                        ignore_error, data,
-                                        requires_modules=requires_modules, requires_version=requires_version,
-                                        requires_model=requires_model,
-                                        warnings=warnings)
-        return response
+        return self._invoke_request(
+            self.session.post,
+            description,
+            uri,
+            ignore_error,
+            data,
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+            requires_model=requires_model,
+            warnings=warnings,
+        )
 
     def invoke_post_snapshot_id(self, description, uri, data, ignore_error=False, requires_modules=None,
                                 requires_version=None, warnings=[], requires_model=None):
@@ -533,15 +563,15 @@ class ISAMAppliance(IBMAppliance):
         for key, value in kwargs.items():
             if key == 'json' and value != {}:
                 json_data = json.dumps(value)
-                self.logger.debug("Input json Data: " + json_data)
+                self.logger.debug(f"Input json Data: {json_data}")
                 args['json'] = json_data
             elif key == 'data':
                 try:
                     json.loads(value)
-                    self.logger.debug("Input Data: " + value)
+                    self.logger.debug(f"Input Data: {value}")
                     args['data'] = value
                 except ValueError:
-                    self.logger.debug("Input Data: " + value)
+                    self.logger.debug(f"Input Data: {value}")
                     args['data'] = value
             else:
                 args[key] = value
@@ -554,36 +584,33 @@ class ISAMAppliance(IBMAppliance):
             # check for stream=True
             if "stream" in args and args["stream"] == True:
                 streaminargs = True
-                if filename == None:
+                if filename is None:
                     return_obj['warnings'] = return_obj['warnings'].append(
                         "filename is missing, for stream=True, filename needs to be non null")
                     return return_obj
-                # else stream content to file
                 else:
-                    if (r.status_code != 200 and r.status_code != 204 and r.status_code != 201):
+                    if r.status_code not in [200, 204, 201]:
                         self.logger.error("  Request failed: ")
                         self.logger.error("     status code: {0}".format(r.status_code))
                         if r.text != "":
-                            self.logger.error("     text: " + r.text)
+                            self.logger.error(f"     text: {r.text}")
                         if not ignore_error:
                             raise IBMError("HTTP Return code: {0}".format(r.status_code), r.text)
-                        else:
-                            return_obj['rc'] = r.status_code
-                            return_obj['data'] = {'msg': 'Unable to extract contents to file!'}
+                        return_obj['rc'] = r.status_code
+                        return_obj['data'] = {'msg': 'Unable to extract contents to file!'}
                     else:
                         with open(filename, 'wb') as f:
                             for chunk in r.iter_content(chunk_size=1024):
                                 if chunk:  # filter out keep-alive new chunks
                                     f.write(chunk)
                         return_obj['rc'] = 0
-                        return_obj['data'] = {'msg': 'Contents extracted to file: ' + filename}
+                        return_obj['data'] = {'msg': f'Contents extracted to file: {filename}'}
 
-            if method == "get" or (method == "post" and streaminargs == True):
-                return_obj['changed'] = False
-            else:
-                return_obj['changed'] = True  # Anything but GET or a POST with stream=True set should result in change
+            return_obj['changed'] = method != "get" and (
+                method != "post" or not streaminargs
+            )
 
-            if streaminargs == False:
+            if not streaminargs:
                 self._process_response(return_obj=return_obj, http_response=r, ignore_error=ignore_error)
 
         except requests.exceptions.ConnectionError:

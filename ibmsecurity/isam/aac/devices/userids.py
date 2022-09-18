@@ -38,32 +38,32 @@ def get(isamAppliance, userID, check_mode=False, force=False):
     """
     Retrieve a list of device fingerprints for a given user ID
     """
-    warnings = []
     ret_obj = search(isamAppliance, userID=userID, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings.append("User {0} had no match, skipping retrieval.".format(userID))
-        return isamAppliance.create_return_object(changed=False, warnings=warnings)
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieve a list of device fingerprints for a given user ID",
                                         "{0}/{1}".format(uri, userID))
+    warnings = ["User {0} had no match, skipping retrieval.".format(userID)]
+    return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
 
 def delete(isamAppliance, userID, check_mode=False, force=False):
     """
     Delete all device fingerprints for the given user ID
     """
-    warnings = []
     ret_obj = search(isamAppliance, userID=userID, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings.append("User {0} had no match, skipping Delete.".format(userID))
-        return isamAppliance.create_return_object(changed=False, warnings=warnings)
-    else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete("Delete all device fingerprints for the given user ID",
-                                               "{0}/{1}".format(uri, userID))
+    if id != {}:
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_delete(
+                "Delete all device fingerprints for the given user ID",
+                "{0}/{1}".format(uri, userID),
+            )
+        )
+
+    warnings = ["User {0} had no match, skipping Delete.".format(userID)]
+    return isamAppliance.create_return_object(changed=False, warnings=warnings)

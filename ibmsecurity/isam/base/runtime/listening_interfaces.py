@@ -138,7 +138,10 @@ def compare(isamAppliance1, isamAppliance2):
     try:
         endpoint1 = ret_obj1['data']['endpoints']
         for endpoint in endpoint1:
-            if endpoint['id'] != 'local-interface' and endpoint['id'] != 'all-application-interfaces':
+            if endpoint['id'] not in [
+                'local-interface',
+                'all-application-interfaces',
+            ]:
                 del endpoint['id']
                 del endpoint['interface']
     except:
@@ -147,7 +150,10 @@ def compare(isamAppliance1, isamAppliance2):
     try:
         endpoint2 = ret_obj2['data']['endpoints']
         for endpoint in endpoint2:
-            if endpoint['id'] != 'local-interface' and endpoint['id'] != 'all-application-interfaces':
+            if endpoint['id'] not in [
+                'local-interface',
+                'all-application-interfaces',
+            ]:
                 del endpoint['id']
                 del endpoint['interface']
     except:

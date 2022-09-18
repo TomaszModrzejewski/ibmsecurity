@@ -25,9 +25,9 @@ def add(isamAppliance, kdb_id, label, dn, size='1024', signature_algorithm='', c
     """
     Creating a certificate request in a certificate database
     """
-    
+
     warnings = []
-    
+
     if signature_algorithm is not None:
         if ibmsecurity.utilities.tools.version_compare(isamAppliance.facts["version"], "9.0.2.0") < 0:
             warnings.append("Appliance at version: {0}, signature_algorithm is not supported. Needs 9.0.2.0 or higher. "
@@ -44,12 +44,12 @@ def add(isamAppliance, kdb_id, label, dn, size='1024', signature_algorithm='', c
                     "size": size,
                     "signature_algorithm": signature_algorithm
             }
-    
+
     if force is True or _check(isamAppliance, kdb_id, label) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
-            
+
             return isamAppliance.invoke_post(
                 "Creating a certificate request in a certificate database",
                 "/isam/ssl_certificates/{0}/cert_request".format(kdb_id),
@@ -78,12 +78,17 @@ def export_cert(isamAppliance, kdb_id, cert_id, filename, check_mode=False, forc
     """
     Exporting a certificate request from a certificate database
     """
-    if force is True or (_check(isamAppliance, kdb_id, cert_id) is True and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Exporting a certificate request from a certificate database",
-                "/isam/ssl_certificates/{0}/cert_request/{1}?export".format(kdb_id, cert_id),
-                filename)
+    if (
+        force is True
+        or (
+            _check(isamAppliance, kdb_id, cert_id) is True
+            and os.path.exists(filename) is False
+        )
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Exporting a certificate request from a certificate database",
+            "/isam/ssl_certificates/{0}/cert_request/{1}?export".format(kdb_id, cert_id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -94,11 +99,7 @@ def _check(isamAppliance, kdb_id, cert_id):
     """
     ret_obj = get_all(isamAppliance, kdb_id)
 
-    for certdb in ret_obj['data']:
-        if certdb['id'] == cert_id:
-            return True
-
-    return False
+    return any(certdb['id'] == cert_id for certdb in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2, kdb_id):

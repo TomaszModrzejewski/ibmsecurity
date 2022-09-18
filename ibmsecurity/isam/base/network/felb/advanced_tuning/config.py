@@ -17,19 +17,17 @@ def add(isamAppliance, name, value, check_mode=False, force=False):
 
     check_value, warnings = _check(isamAppliance, name, value)
 
-    if force is True or check_value is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_post("Creating an attribute", module_uri,
-                                             {
-                                                 "name": name,
-                                                 "value": value
-                                             }, requires_modules=requires_modules, requires_version=requires_version,
-                                             requires_model=requires_model)
-
-    else:
+    if force is not True and check_value is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_post("Creating an attribute", module_uri,
+                                         {
+                                             "name": name,
+                                             "value": value
+                                         }, requires_modules=requires_modules, requires_version=requires_version,
+                                         requires_model=requires_model)
 
 
 def set(isamAppliance, name, value=None, check_mode=False, force=False):
@@ -51,15 +49,14 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     check_value, warnings = search(isamAppliance, name)
 
-    if force is True or check_value is not False:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete("Deleting an attribute", "{0}/{1}".format(module_uri, name),
-                                               requires_modules=requires_modules, requires_version=requires_version,
-                                               requires_model=requires_model)
-    else:
+    if force is not True and check_value is False:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_delete("Deleting an attribute", "{0}/{1}".format(module_uri, name),
+                                           requires_modules=requires_modules, requires_version=requires_version,
+                                           requires_model=requires_model)
 
 
 def get(isamAppliance, attribute_name):
@@ -88,18 +85,16 @@ def update(isamAppliance, attribute_name, value, check_mode=False, force=False):
 
     check_value, warnings = _check(isamAppliance, attribute_name, value)
 
-    if force is True or check_value is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_put("Updating an attribute", "{0}/{1}".format(module_uri, attribute_name),
-                                            {
-                                                "value": value
-                                            }, requires_version=requires_version, requires_modules=requires_modules,
-                                            requires_model=requires_model)
-
-    else:
+    if force is not True and check_value is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_put("Updating an attribute", "{0}/{1}".format(module_uri, attribute_name),
+                                        {
+                                            "value": value
+                                        }, requires_version=requires_version, requires_modules=requires_modules,
+                                        requires_model=requires_model)
 
 
 def _check(isamAppliance, attribute_name, attribute_value):
@@ -117,16 +112,12 @@ def _check(isamAppliance, attribute_name, attribute_value):
         check_value = True
         return check_value, warnings
 
-    if 'value' in temp_obj['data']:
-        if temp_obj['data']['value'] != attribute_value:
-            check_value = True
-            return check_value, warnings
-        else:
-            check_value = False
-            return check_value, warnings
-    else:
-        check_value = False
-        return check_value, warnings
+    check_value = (
+        'value' in temp_obj['data']
+        and temp_obj['data']['value'] != attribute_value
+    )
+
+    return check_value, warnings
 
 
 def search(isamAppliance, attribute_name):
@@ -161,8 +152,7 @@ def compare(isamAppliance1, isamAppliance2):
     warnings = []
 
     if "Docker" in obj1_warnings or "Docker" in obj2_warnings:
-        warnings.append(obj1_warnings)
-        warnings.append(obj2_warnings)
+        warnings.extend((obj1_warnings, obj2_warnings))
         return isamAppliance1.create_return_object(changed=False, warnings=warnings)
 
     obj1 = {'rc': 0, 'data': [], 'warnings': []}

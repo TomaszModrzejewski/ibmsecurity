@@ -95,15 +95,12 @@ def _exists(isamAppliance, uuid):
     :param uuid:
     :return:
     """
-    exists = False
     ret_obj = get_all(isamAppliance)
 
-    for rsyslog in ret_obj['data']['rsyslogObjects']:
-        if rsyslog['uuid'] == uuid:
-            exists = True
-            break
-
-    return exists
+    return any(
+        rsyslog['uuid'] == uuid
+        for rsyslog in ret_obj['data']['rsyslogObjects']
+    )
 
 
 def _check(isamAppliance, uuid, name, objType, comment, collector, collectorPort, collectorLeef):

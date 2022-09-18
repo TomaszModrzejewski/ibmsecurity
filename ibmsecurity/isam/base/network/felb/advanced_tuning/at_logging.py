@@ -32,17 +32,15 @@ def update(isamAppliance, local, remote_address, remote_port, remote_facility, c
 
     change_required, warnings = _check(isamAppliance, json_data)
 
-    if force is True or change_required is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_put("Updating logging configuration attributes", module_uri, json_data,
-                                            requires_modules=requires_modules,
-                                            requires_version=requires_versions,
-                                            requires_model=requires_model)
-
-    else:
+    if force is not True and change_required is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_put("Updating logging configuration attributes", module_uri, json_data,
+                                        requires_modules=requires_modules,
+                                        requires_version=requires_versions,
+                                        requires_model=requires_model)
 
 
 def _check(isamAppliance, json_data):
@@ -54,9 +52,11 @@ def _check(isamAppliance, json_data):
     change_required = False
 
     if json_data['local'] is True:
-        if 'local' in ret_obj['data']:
-            if json_data['local'] != ret_obj['data']['local']:
-                change_required = True
+        if (
+            'local' in ret_obj['data']
+            and json_data['local'] != ret_obj['data']['local']
+        ):
+            change_required = True
     else:
         sorted_ret_obj = tools.json_sort(ret_obj['data'])
         sorted_json_data = tools.json_sort(json_data)

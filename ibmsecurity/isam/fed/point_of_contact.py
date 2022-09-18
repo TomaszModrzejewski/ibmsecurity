@@ -103,15 +103,14 @@ def add(isamAppliance, name, description=None, authenticateCallbacks=None, signI
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = _create_json(name, description, authenticateCallbacks, signInCallbacks, localIdCallbacks,
-                                     signOutCallbacks, authnPolicyCallbacks)
+        json_data = _create_json(name, description, authenticateCallbacks, signInCallbacks, localIdCallbacks,
+                                 signOutCallbacks, authnPolicyCallbacks)
 
-            return isamAppliance.invoke_post(
-                "Create a new point of contact profile",
-                "{0}/profiles".format(uri), json_data,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        return isamAppliance.invoke_post(
+            "Create a new point of contact profile",
+            "{0}/profiles".format(uri), json_data,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -127,14 +126,13 @@ def update(isamAppliance, name, description=None, authenticateCallbacks=None, si
     if force is True or update_required is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = _create_json(name, description, authenticateCallbacks, signInCallbacks, localIdCallbacks,
-                                     signOutCallbacks, authnPolicyCallbacks)
-            return isamAppliance.invoke_put(
-                "Update a specific point of contact profile",
-                "{0}/profiles/{1}".format(uri, poc_id), json_data,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        json_data = _create_json(name, description, authenticateCallbacks, signInCallbacks, localIdCallbacks,
+                                 signOutCallbacks, authnPolicyCallbacks)
+        return isamAppliance.invoke_put(
+            "Update a specific point of contact profile",
+            "{0}/profiles/{1}".format(uri, poc_id), json_data,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -148,13 +146,12 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     if force is True or ret_obj['data'] != {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            poc_id = ret_obj['data']
-            return isamAppliance.invoke_delete(
-                "Delete a point of contact profile",
-                "{0}/profiles/{1}".format(uri, poc_id),
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        poc_id = ret_obj['data']
+        return isamAppliance.invoke_delete(
+            "Delete a point of contact profile",
+            "{0}/profiles/{1}".format(uri, poc_id),
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 

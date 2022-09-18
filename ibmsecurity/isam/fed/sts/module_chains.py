@@ -44,11 +44,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        warnings = ["STS Chain {0} had no match, skipping retrieval.".format(name)]
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    warnings = ["STS Chain {0} had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _get(isamAppliance, id):
@@ -97,52 +96,57 @@ def add(isamAppliance, name, chainName, requestType, description=None, tokenType
     if force is False:
         ret_obj = search(isamAppliance, name)
 
-    if force is True or ret_obj['data'] == {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    if (
+        force is True
+        and check_mode is True
+        or force is not True
+        and ret_obj['data'] == {}
+        and check_mode is True
+    ):
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    elif force is True or ret_obj['data'] == {}:
+        ret_obj = templates.search(isamAppliance, name=chainName)
+        if ret_obj['data'] == {}:
+            warnings.append("Unable to find a valid STS Chain Template for {0}".format(chainName))
         else:
-            ret_obj = templates.search(isamAppliance, name=chainName)
-            if ret_obj['data'] == {}:
-                warnings.append("Unable to find a valid STS Chain Template for {0}".format(chainName))
-            else:
-                chainId = ret_obj['data']
-                json_data = {
-                    "name": name,
-                    "chainId": chainId,
-                    "requestType": requestType
-                }
-                if description is not None:
-                    json_data['description'] = description
-                if tokenType is not None:
-                    json_data['tokenType'] = tokenType
-                if xPath is not None:
-                    json_data['xPath'] = xPath
-                if signResponses is not None:
-                    json_data['signResponses'] = signResponses
-                if signatureKey is not None:
-                    json_data['signatureKey'] = signatureKey
-                if validateRequests is not None:
-                    json_data['validateRequests'] = validateRequests
-                if validationKey is not None:
-                    json_data['validationKey'] = validationKey
-                if sendValidationConfirmation is not None:
-                    json_data['sendValidationConfirmation'] = sendValidationConfirmation
-                if issuer is not None:
-                    json_data['issuer'] = issuer
-                if appliesTo is not None:
-                    json_data['appliesTo'] = appliesTo
-                if properties is not None:
-                    for idx, x in enumerate(properties['self']):
-                        if "map.rule.reference.names" in x['name']:
-                            ret_obj1 = mapping_rules.search(isamAppliance, x['value'][0])
-                            properties['self'].append(
-                                {"name": x['prefix'] + ".map.rule.reference.ids", "value": [ret_obj1['data']]})
-                            del properties['self'][idx]
-                    json_data['properties'] = properties
-                return isamAppliance.invoke_post(
-                    "Create an STS chain", uri, json_data,
-                    requires_modules=requires_modules,
-                    requires_version=requires_version, warnings=warnings)
+            chainId = ret_obj['data']
+            json_data = {
+                "name": name,
+                "chainId": chainId,
+                "requestType": requestType
+            }
+            if description is not None:
+                json_data['description'] = description
+            if tokenType is not None:
+                json_data['tokenType'] = tokenType
+            if xPath is not None:
+                json_data['xPath'] = xPath
+            if signResponses is not None:
+                json_data['signResponses'] = signResponses
+            if signatureKey is not None:
+                json_data['signatureKey'] = signatureKey
+            if validateRequests is not None:
+                json_data['validateRequests'] = validateRequests
+            if validationKey is not None:
+                json_data['validationKey'] = validationKey
+            if sendValidationConfirmation is not None:
+                json_data['sendValidationConfirmation'] = sendValidationConfirmation
+            if issuer is not None:
+                json_data['issuer'] = issuer
+            if appliesTo is not None:
+                json_data['appliesTo'] = appliesTo
+            if properties is not None:
+                for idx, x in enumerate(properties['self']):
+                    if "map.rule.reference.names" in x['name']:
+                        ret_obj1 = mapping_rules.search(isamAppliance, x['value'][0])
+                        properties['self'].append(
+                            {"name": x['prefix'] + ".map.rule.reference.ids", "value": [ret_obj1['data']]})
+                        del properties['self'][idx]
+                json_data['properties'] = properties
+            return isamAppliance.invoke_post(
+                "Create an STS chain", uri, json_data,
+                requires_modules=requires_modules,
+                requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -156,15 +160,14 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if chain_id == {}:
         logger.info("STS Chain {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a specific STS chain",
-                "{0}/{1}".format(uri, chain_id),
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete a specific STS chain",
+            "{0}/{1}".format(uri, chain_id),
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -183,16 +186,18 @@ def update(isamAppliance, name, chainName, requestType, description=None, tokenT
                                                   ignore_password_for_idempotency)
     if chain_id is None:
         warnings.append("Cannot update data for unknown STS Chain (or template): {0}".format(name))
-    else:
-        if force is True or update_required is True:
-            if check_mode is True:
-                return isamAppliance.create_return_object(changed=True)
-            else:
-                return isamAppliance.invoke_put(
-                    "Update a specific STS chain",
-                    "{0}/{1}".format(uri, chain_id), json_data,
-                    requires_modules=requires_modules,
-                    requires_version=requires_version)
+    elif force is True or update_required is True:
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_put(
+                "Update a specific STS chain",
+                "{0}/{1}".format(uri, chain_id),
+                json_data,
+                requires_modules=requires_modules,
+                requires_version=requires_version,
+            )
+        )
 
     return isamAppliance.create_return_object(warnings=warnings)
 

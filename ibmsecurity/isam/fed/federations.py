@@ -29,11 +29,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("Federation {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("Federation {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def get_templates(isamAppliance, name, check_mode=False, force=False):
@@ -43,14 +42,13 @@ def get_templates(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("Federation {0} had no match, skipping templates retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return isamAppliance.invoke_get("Retrieve the templates for a federation",
                                         "{0}/{1}/templates".format(uri, id),
                                         requires_modules=requires_modules,
                                         requires_version=requires_version)
+    logger.info("Federation {0} had no match, skipping templates retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def _get(isamAppliance, id):
@@ -120,21 +118,20 @@ def add(isamAppliance, name, protocol, configuration, role=None, templateName=No
     if force is True or ret_obj['data'] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "protocol": protocol,
-                "configuration": configuration
-            }
-            if role is not None:
-                json_data['role'] = role
-            if templateName is not None:
-                json_data['templateName'] = templateName
-            return isamAppliance.invoke_post(
-                "Create a new federation",
-                uri, json_data,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        json_data = {
+            "name": name,
+            "protocol": protocol,
+            "configuration": configuration
+        }
+        if role is not None:
+            json_data['role'] = role
+        if templateName is not None:
+            json_data['templateName'] = templateName
+        return isamAppliance.invoke_post(
+            "Create a new federation",
+            uri, json_data,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -148,15 +145,14 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if fed_id == {}:
         logger.info("Federation {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a federation",
-                "{0}/{1}".format(uri, fed_id),
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete a federation",
+            "{0}/{1}".format(uri, fed_id),
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -203,10 +199,7 @@ def _check(isamAppliance, name, role, configuration, templateName, new_name=None
         return None, update_required, json_data
     else:
         fed_id = ret_obj['data']['id']
-        if new_name is not None:
-            json_data['name'] = new_name
-        else:
-            json_data['name'] = name
+        json_data['name'] = new_name if new_name is not None else name
         # Only added parameters passed, remove everything else
         if role is not None:
             json_data['role'] = role
@@ -251,11 +244,13 @@ def _check(isamAppliance, name, role, configuration, templateName, new_name=None
                 if exist_map_rule_id is None and exist_map_rule is not None:
                     import ibmsecurity.isam.aac.mapping_rules
                     new_map_obj = ibmsecurity.isam.aac.mapping_rules._get(isamAppliance, new_map_rule_id)
-                    if new_map_obj['data'] != {}:
-                        if new_map_obj['data']['content'].strip() != exist_map_rule.strip():
-                            logger.info("Mapping Rule is different, need to update.")
-                            return fed_id, True, json_data
-                # Allow mapping rule id to be compared - not actual rules contents
+                    if (
+                        new_map_obj['data'] != {}
+                        and new_map_obj['data']['content'].strip()
+                        != exist_map_rule.strip()
+                    ):
+                        logger.info("Mapping Rule is different, need to update.")
+                        return fed_id, True, json_data
                 elif exist_map_rule_id is not None:
                     logger.debug("Comapring mapping rule ids and ignoring actual rule contents.")
                     if exist_map_rule is not None:
@@ -292,14 +287,15 @@ def export_metadata(isamAppliance, name, filename, check_mode=False, force=False
         raise IBMError("999", "Cannot export data from unknown federation: {0}".format(name))
     import os.path
 
-    if force is True or (fed_id != {} and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a federation",
-                "{0}/{1}/metadata".format(uri, fed_id),
-                filename,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+    if (
+        force is True or (fed_id != {} and os.path.exists(filename) is False)
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a federation",
+            "{0}/{1}/metadata".format(uri, fed_id),
+            filename,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 

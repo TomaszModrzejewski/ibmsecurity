@@ -27,12 +27,11 @@ def get(isamAppliance, name=None, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name, check_mode=False, force=False)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("PIP '{0}' had no match, skipping retrieval.".format(name))
-        warnings = ["PIP '{0}' had no match, skipping retrieval.".format(name)]
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("PIP '{0}' had no match, skipping retrieval.".format(name))
+    warnings = ["PIP '{0}' had no match, skipping retrieval.".format(name)]
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def delete(isamAppliance, name=None, check_mode=False, force=False):
@@ -44,20 +43,18 @@ def delete(isamAppliance, name=None, check_mode=False, force=False):
     id = ret_obj['data']
 
     if force is True or id != {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-
-            return isamAppliance.invoke_delete(
+        return (
+            isamAppliance.create_return_object(changed=True)
+            if check_mode is True
+            else isamAppliance.invoke_delete(
                 "Delete a policy information point",
                 "{0}/{1}".format(uri, id),
-                requires_modules=requires_modules, requires_version=requires_version
+                requires_modules=requires_modules,
+                requires_version=requires_version,
             )
+        )
 
-    if id == {}:
-        logger.info("PIP '{0}' does not exists, skipping delete.".format(name))
-        return isamAppliance.create_return_object()
-
+    logger.info("PIP '{0}' does not exists, skipping delete.".format(name))
     return isamAppliance.create_return_object()
 
 
@@ -98,24 +95,10 @@ def _get(isamAppliance, id):
 
 
 def _create_json(name, properties, attributes, description, type):
-    json_data = {
+    return {
         "name": name,
         "type": type,
+        'attributes': attributes if attributes is not None else [],
+        'description': description if description is not None else '',
+        'properties': properties if properties is not None else [],
     }
-
-    if attributes is not None:
-        json_data['attributes'] = attributes
-    else:
-        json_data['attributes'] = []
-
-    if description is not None:
-        json_data['description'] = description
-    else:
-        json_data['description'] = ''
-
-    if properties is not None:
-        json_data['properties'] = properties
-    else:
-        json_data['properties'] = []
-
-    return json_data

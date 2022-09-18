@@ -48,11 +48,14 @@ def update(isamAppliance, name, input_data=[], check_mode=False, force=False):
 def _check_exist(isamAppliance, name):
     ret_obj = ibmsecurity.isam.web.reverse_proxy.instance.get(isamAppliance)
 
-    for rp in ret_obj['data']:
-        if rp['id'] == name:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for rp in ret_obj['data']
+            if rp['id'] == name
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check_contents(isamAppliance, name, input_data):

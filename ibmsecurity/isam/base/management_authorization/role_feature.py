@@ -11,7 +11,7 @@ def set(isamAppliance, name, feature_name, access=None, check_mode=False, force=
     new_feature = True
     ret_obj = ibmsecurity.isam.base.management_authorization.role.get(isamAppliance, name)
 
-    if (ret_obj['data']['features'] == None):
+    if ret_obj['data']['features'] is None:
         ret_obj['data']['features'] = []
     else:
         for ftr in ret_obj['data']['features']:

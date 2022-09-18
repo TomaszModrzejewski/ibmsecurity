@@ -24,11 +24,10 @@ def get(isamAppliance, name, id=None, check_mode=False, force=False):
         ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
         id = ret_obj['data']
 
-    if id == {}:
-        logger.info("FIDO2 Metadata {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("FIDO2 Metadata {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 def search(isamAppliance, name, force=False, check_mode=False):
     """
@@ -54,14 +53,13 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if id == {}:
         logger.info("FIDO2 relying party {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a FIDO2 relying party",
-                "{0}/{1}".format(uri, id),
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete a FIDO2 relying party",
+            "{0}/{1}".format(uri, id),
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 

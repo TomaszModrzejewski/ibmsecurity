@@ -28,8 +28,6 @@ def update(isamAppliance, id, contents, check_mode=False, force=False):
     Update the tracing configuration file of an existing instance
 
     """
-    update_required = False
-
     ret_obj = get(isamAppliance, id)
     warnings = ret_obj['warnings']
     if warnings and 'Docker' in warnings[0]:
@@ -37,10 +35,8 @@ def update(isamAppliance, id, contents, check_mode=False, force=False):
 
     ret_contents = ret_obj['data']['contents']
 
-    if ret_contents.strip() != contents.strip():
-        update_required = True
-
-    if force is True or update_required is True:
+    update_required = ret_contents.strip() != contents.strip()
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=ret_obj['warnings'])
         else:
@@ -68,20 +64,19 @@ def import_file(isamAppliance, id, filepath, check_mode=False, force=False):
     if force is True or _check_import(isamAppliance=isamAppliance, id=id, filepath=filepath) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            with open(filepath, 'r') as infile:
-                contents = infile.read()
+        with open(filepath, 'r') as infile:
+            contents = infile.read()
 
-            return isamAppliance.invoke_put(
-                "Update the tracing configuration file of an existing instance",
-                "{0}/{1}/tracing_configuration/v1".format(uri, id),
-                {
-                    'contents': contents.strip()
-                },
-                requires_modules=requires_modules,
-                requires_version=requires_version,
-                requires_model=requires_model
-            )
+        return isamAppliance.invoke_put(
+            "Update the tracing configuration file of an existing instance",
+            "{0}/{1}/tracing_configuration/v1".format(uri, id),
+            {
+                'contents': contents.strip()
+            },
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+            requires_model=requires_model
+        )
 
     return isamAppliance.create_return_object()
 

@@ -65,12 +65,11 @@ def _check(isamAppliance, cluster_json):
     if sorted_ret_obj != sorted_json_data:
         logger.info("Existing and input data do not match - updated needed.")
         obj['value'] = False
-        obj['warnings'] = ret_obj['warnings']
-        return obj
     else:
         obj['value'] = True
-        obj['warnings'] = ret_obj['warnings']
-        return obj
+
+    obj['warnings'] = ret_obj['warnings']
+    return obj
 
 
 def compare(isamAppliance1, isamAppliance2):

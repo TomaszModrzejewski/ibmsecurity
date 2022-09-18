@@ -80,34 +80,31 @@ def add(isamAppliance, name, filename=None, content=None, category=None, upload_
     Add a mapping rule
     """
 
-    if force is True or _check(isamAppliance, name) is False:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
+    if force is not True and _check(isamAppliance, name) is not False:
+        return isamAppliance.create_return_object()
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
+    if content is None or content == '':
+        if upload_filename is None or upload_filename == '':
+            return isamAppliance.create_return_object(
+                warnings="Need to pass content or upload_filename for set() to work.")
+        with open(upload_filename, 'r') as contentFile:
+            content = contentFile.read()
+    if filename is None or filename == '':
+        if upload_filename is None or upload_filename == '':
+            return isamAppliance.create_return_object(
+                warnings="Need to pass filename or upload_filename for set() to work.")
         else:
-            if content is None or content == '':
-                if upload_filename is None or upload_filename == '':
-                    return isamAppliance.create_return_object(
-                        warnings="Need to pass content or upload_filename for set() to work.")
-                else:
-                    with open(upload_filename, 'r') as contentFile:
-                        content = contentFile.read()
-            if filename is None or filename == '':
-                if upload_filename is None or upload_filename == '':
-                    return isamAppliance.create_return_object(
-                        warnings="Need to pass filename or upload_filename for set() to work.")
-                else:
-                    filename = _extract_filename(upload_filename)
-            return isamAppliance.invoke_post(
-                "Add a mapping rule",
-                "/iam/access/v8/mapping-rules",
-                {
-                    "name": name,
-                    "fileName": filename,
-                    "content": content,
-                    "category": category
-                })
-
-    return isamAppliance.create_return_object()
+            filename = _extract_filename(upload_filename)
+    return isamAppliance.invoke_post(
+        "Add a mapping rule",
+        "/iam/access/v8/mapping-rules",
+        {
+            "name": name,
+            "fileName": filename,
+            "content": content,
+            "category": category
+        })
 
 
 def delete(isamAppliance, name, check_mode=False, force=False):
@@ -137,21 +134,19 @@ def update(isamAppliance, name, content=None, upload_filename=None, check_mode=F
         if upload_filename is None or upload_filename == '':
             return isamAppliance.create_return_object(
                 warnings="Need to pass content or upload_filename for set() to work.")
-        else:
-            with open(upload_filename, 'r') as contentFile:
-                content = contentFile.read()
+        with open(upload_filename, 'r') as contentFile:
+            content = contentFile.read()
 
     update_required = False
     ret_obj = search(isamAppliance, name)
     id = ret_obj['data']
-    if force is False:
-        if id:
-            ret_obj_content = _get(isamAppliance, id)
-            # Having to strip whitespace to get a good comparison (suspect carriage returns added after save happens)
-            if (ret_obj_content['data']['content']).strip() != (content).strip():
-                update_required = True
+    if force is False and id:
+        ret_obj_content = _get(isamAppliance, id)
+        # Having to strip whitespace to get a good comparison (suspect carriage returns added after save happens)
+        if (ret_obj_content['data']['content']).strip() != (content).strip():
+            update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
@@ -173,13 +168,15 @@ def export_file(isamAppliance, name, filename, check_mode=False, force=False):
     if force is False:
         ret_obj = search(isamAppliance, name)
 
-    if force is True or (ret_obj['data'] != {} and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            id = ret_obj['data']
-            return isamAppliance.invoke_get_file(
-                "Export a specific mapping rule",
-                "/iam/access/v8/mapping-rules/{0}/file/".format(id),
-                filename)
+    if (
+        force is True
+        or (ret_obj['data'] != {} and os.path.exists(filename) is False)
+    ) and check_mode is False:
+        id = ret_obj['data']
+        return isamAppliance.invoke_get_file(
+            "Export a specific mapping rule",
+            "/iam/access/v8/mapping-rules/{0}/file/".format(id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -191,25 +188,24 @@ def upload(isamAppliance, name, upload_filename, filename=None, category="OAUTH"
     if force is True or _check(isamAppliance, name) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if filename is None:
-                filename = _extract_filename(upload_filename)
+        if filename is None:
+            filename = _extract_filename(upload_filename)
 
-            return isamAppliance.invoke_post_files(
-                "Import a new mapping rule",
-                "/iam/access/v8/mapping-rules",
-                [
-                    {
-                        'file_formfield': 'file',
-                        'filename': upload_filename,
-                        'mimetype': 'application/octet-stream'
-                    }
-                ],
+        return isamAppliance.invoke_post_files(
+            "Import a new mapping rule",
+            "/iam/access/v8/mapping-rules",
+            [
                 {
-                    "name": name,
-                    "filename": filename,
-                    "category": category
-                })
+                    'file_formfield': 'file',
+                    'filename': upload_filename,
+                    'mimetype': 'application/octet-stream'
+                }
+            ],
+            {
+                "name": name,
+                "filename": filename,
+                "category": category
+            })
 
     return isamAppliance.create_return_object()
 
@@ -236,7 +232,7 @@ def import_file(isamAppliance, name, filename, check_mode=False, force=False):
             if (ret_obj_content['data']['content']).strip() != content.strip():
                 update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
@@ -261,11 +257,7 @@ def _check(isamAppliance, name):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['name'] == name:
-            return True
-
-    return False
+    return any(obj['name'] == name for obj in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):

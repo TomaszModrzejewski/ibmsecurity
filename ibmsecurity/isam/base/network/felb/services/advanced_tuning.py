@@ -36,17 +36,16 @@ def delete(isamAppliance, service_name, attribute_name, check_mode=False, force=
     """
 
     check_value, warnings = _check(isamAppliance, service_name, attribute_name)
-    if force is True or check_value is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete("Deleting a service attribute",
-                                               "{0}{1}/attributes/{2}".format(module_uri, service_name,
-                                                                              attribute_name),
-                                               requires_version=requires_versions,
-                                               requires_modules=requires_modules, requires_model=requires_model)
-    else:
+    if force is not True and check_value is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_delete("Deleting a service attribute",
+                                           "{0}{1}/attributes/{2}".format(module_uri, service_name,
+                                                                          attribute_name),
+                                           requires_version=requires_versions,
+                                           requires_modules=requires_modules, requires_model=requires_model)
 
 
 def get(isamAppliance, service_name, attribute_name):
@@ -130,11 +129,8 @@ def _check_add(isamAppliance, service_name, name, value):
     except:
         return True, warnings
 
-    if 'value' in check_obj['data']:
-        if check_obj['data']['value'] != value:
-            return True, warnings
-        else:
-            return False, warnings
+    if 'value' in check_obj['data'] and check_obj['data']['value'] != value:
+        return True, warnings
     else:
         return False, warnings
 
@@ -150,7 +146,4 @@ def _check(isamAppliance, service_name, attribute_name):
     except:
         return False, warnings
 
-    if check_obj['data'] == {}:
-        return False, warnings
-
-    return True, warnings
+    return (False, warnings) if check_obj['data'] == {} else (True, warnings)

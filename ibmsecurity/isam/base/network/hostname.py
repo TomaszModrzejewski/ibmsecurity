@@ -33,10 +33,11 @@ def set(isamAppliance, hostname, check_mode=False, force=False):
 def _check(isamAppliance, hostname):
     ret_obj = get(isamAppliance)
     warnings = ret_obj['warnings']
-    if 'hostName' in ret_obj['data']:
-        if ret_obj['data']['hostName'] == hostname:
-            return True, warnings
-        else:
-            return False, warnings
-    else:
+    if (
+        'hostName' in ret_obj['data']
+        and ret_obj['data']['hostName'] == hostname
+        or 'hostName' not in ret_obj['data']
+    ):
         return True, warnings
+    else:
+        return False, warnings

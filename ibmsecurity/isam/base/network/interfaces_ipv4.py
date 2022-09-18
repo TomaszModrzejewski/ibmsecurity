@@ -30,19 +30,18 @@ def add(isamAppliance, label, address, maskOrPrefix, overrideSubnetChecking=Fals
     if force is True or add_needed is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            addr = {
-                '_isNew': True,
-                'objType': 'ipv4Address',
-                'uuid': None,
-                'address': address,
-                'maskOrPrefix': maskOrPrefix,
-                'allowManagement': allowManagement,
-                'enabledAddress': True,
-                'enabled': enabled
-            }
-            ret_obj['ipv4']['addresses'].append(addr)
-            return ibmsecurity.isam.base.network.interfaces._update_interface(isamAppliance, ret_obj)
+        addr = {
+            '_isNew': True,
+            'objType': 'ipv4Address',
+            'uuid': None,
+            'address': address,
+            'maskOrPrefix': maskOrPrefix,
+            'allowManagement': allowManagement,
+            'enabledAddress': True,
+            'enabled': enabled
+        }
+        ret_obj['ipv4']['addresses'].append(addr)
+        return ibmsecurity.isam.base.network.interfaces._update_interface(isamAppliance, ret_obj)
 
     return isamAppliance.create_return_object()
 
@@ -96,10 +95,11 @@ def update(isamAppliance, label, address, new_address, maskOrPrefix, vlanId=None
                         'allowManagement': allowManagement,
                         'enabled': enabled
                     }
-                    update_needed = not (
-                            ibmsecurity.utilities.tools.json_sort(addr) == ibmsecurity.utilities.tools.json_sort(
-                        upd_addr))
-                    if (update_needed is True):
+                    update_needed = ibmsecurity.utilities.tools.json_sort(
+                        addr
+                    ) != ibmsecurity.utilities.tools.json_sort(upd_addr)
+
+                    if update_needed:
                         ret_obj['ipv4']['addresses'].remove(addr)
                         ret_obj['ipv4']['addresses'].append(upd_addr)
                         ret_obj['ipv4']['overrideSubnetChecking'] = overrideSubnetChecking
@@ -134,17 +134,17 @@ def set_dhcp(isamAppliance, label, vlanId=None, enabled=False, allowManagement=F
                 'providesDefaultRoute': providesDefaultRoute,
                 'routeMetric': routeMetric
             }
-            update_needed = not (
-                    ibmsecurity.utilities.tools.json_sort(
-                        ret_obj['ipv4']['dhcp']) == ibmsecurity.utilities.tools.json_sort(
-                upd_dhcp))
-            if (update_needed is True):
+            update_needed = ibmsecurity.utilities.tools.json_sort(
+                ret_obj['ipv4']['dhcp']
+            ) != ibmsecurity.utilities.tools.json_sort(upd_dhcp)
+
+            if update_needed:
                 ret_obj['ipv4']['dhcp'] = upd_dhcp
         else:
             warnings.append("Interface {0} not found, Set dhcp is not supported.".format(label))
             return isamAppliance.create_return_object(changed=False, warnings=warnings)
 
-    if force is True or update_needed is True:
+    if force is True or update_needed:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

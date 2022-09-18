@@ -53,18 +53,17 @@ def set(isamAppliance, id, code, check_mode=False, force=False):
     if force is True or check(isamAppliance, id) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            ret_obj = isamAppliance.invoke_post(
-                "Activating a Module",
-                "/isam/capabilities/v1",
-                {
-                    'code': code
-                })
-            # Update 'facts', with newly activated module
-            if 'activations' not in isamAppliance.facts:
-                isamAppliance.facts['activations'] = []
-            isamAppliance.facts['activations'].append(id)
-            return ret_obj
+        ret_obj = isamAppliance.invoke_post(
+            "Activating a Module",
+            "/isam/capabilities/v1",
+            {
+                'code': code
+            })
+        # Update 'facts', with newly activated module
+        if 'activations' not in isamAppliance.facts:
+            isamAppliance.facts['activations'] = []
+        isamAppliance.facts['activations'].append(id)
+        return ret_obj
 
     return isamAppliance.create_return_object()
 
@@ -76,13 +75,12 @@ def delete(isamAppliance, id, check_mode=False, force=False):
     if force is True or check(isamAppliance, id) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            ret_obj = isamAppliance.invoke_delete(
-                "Deleting activation of Module",
-                "/isam/capabilities/{0}/v1".format(id))
-            # Update 'facts', remove module
-            isamAppliance.facts['activations'].remove(id)
-            return ret_obj
+        ret_obj = isamAppliance.invoke_delete(
+            "Deleting activation of Module",
+            "/isam/capabilities/{0}/v1".format(id))
+        # Update 'facts', remove module
+        isamAppliance.facts['activations'].remove(id)
+        return ret_obj
 
     return isamAppliance.create_return_object()
 
@@ -95,7 +93,7 @@ def check(isamAppliance, id):
 
     for activation in ret_obj['data']:
         if id == activation['id']:
-            logger.info("This module is already activated: " + id)
+            logger.info(f"This module is already activated: {id}")
             return True
 
     return False
@@ -117,9 +115,8 @@ def check_enabled(isamAppliance, id, enabled):
     """
     ret_obj = get_all(isamAppliance)
 
-    for activation in ret_obj['data']:
-        if id == activation['id']:
-            if activation['enabled'] == enabled.capitalize():
-                return True
-
-    return False
+    return any(
+        id == activation['id']
+        and activation['enabled'] == enabled.capitalize()
+        for activation in ret_obj['data']
+    )

@@ -14,28 +14,31 @@ def install(isamAppliance, license, check_mode=False, force=False):
     install license in the appliance
     license should be the filename of the license file
     """
+    file = {"license": open(license, 'rb')}
+
+    if _check_license(isamAppliance, license) == True and force == False:
+        return isamAppliance.create_return_object(warnings=["License already installed"])
+    if _check_license(isamAppliance, license) != False and force != True:
+        return isamAppliance.create_return_object()
     # create the request header for the post first
     headers = {
         "Accept": "text/html"
     }
 
-    file = {"license": open(license, 'rb')}
-
-    if _check_license(isamAppliance, license) == True and force == False:
-        return isamAppliance.create_return_object(warnings=["License already installed"])
-    else:
-        if _check_license(isamAppliance, license) == False or force == True:
-            if check_mode:
-                return isamAppliance.create_return_object(
-                    changed=True)  # there is no real change in appliance, so maybe it should be false
-            else:
-                return isamAppliance.invoke_request("Applying license to appliance", method="post", uri=uri,
-                                                    requires_modules=requires_modules,
-                                                    requires_version=requires_version,
-                                                    warnings=[],
-                                                    headers=headers, files=file)
-
-    return isamAppliance.create_return_object()
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode
+        else isamAppliance.invoke_request(
+            "Applying license to appliance",
+            method="post",
+            uri=uri,
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+            warnings=[],
+            headers=headers,
+            files=file,
+        )
+    )
 
 
 def get_all(isamAppliance, check_mode=False, force=False):
@@ -64,14 +67,13 @@ def _check_license(isamAppliance, license):
 
     for path in ['.//OCN']:
         node = tree.find(path)
-        if node is not None:
-            ocnnumber = node.text
-            for item, value in ret_obj['data'].items():
-                if 'ocn' in value and value['ocn'] == ocnnumber:
-                    return True
-        else:
+        if node is None:
             return False  # does not look like a valid input license file
 
+        ocnnumber = node.text
+        for item, value in ret_obj['data'].items():
+            if 'ocn' in value and value['ocn'] == ocnnumber:
+                return True
     return False
 
 

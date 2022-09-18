@@ -24,11 +24,10 @@ def get(isamAppliance, name, id=None, check_mode=False, force=False):
         ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
         id = ret_obj['data']
 
-    if id == {}:
-        logger.info("FIDO2 Metadata {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("FIDO2 Metadata {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 def search(isamAppliance, name, force=False, check_mode=False):
     """
@@ -54,14 +53,13 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if id == {}:
         logger.info("FIDO2 Metadata {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete a FIDO2 Metadata file",
-                "{0}/{1}".format(uri, id),
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete a FIDO2 Metadata file",
+            "{0}/{1}".format(uri, id),
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -75,14 +73,14 @@ def export_file(isamAppliance, name, filename, check_mode=False, force=False):
 
     if id == {}:
         logger.info("FIDO2 Metadata {0} not found, skipping export.".format(name))
-    else:
-        if force is True or (os.path.exists(filename) is False):
-            if check_mode is False:  # No point downloading a file if in check_mode
-                return isamAppliance.invoke_get_file(
-                    "Export a specific FIDO2 Metadata file",
-                    "{0}/{1}/file".format(uri,id),
-                    filename,
-                    requires_modules=requires_modules, requires_version=requires_version)
+    elif (
+        force is True or (os.path.exists(filename) is False)
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a specific FIDO2 Metadata file",
+            "{0}/{1}/file".format(uri,id),
+            filename,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -106,15 +104,13 @@ def import_file(isamAppliance, filename, check_mode=False, force=False):
         else:
             import_new = True
 
-    if force is True or update_required is True or import_new is True:
+    if force is True or update_required or import_new:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            if import_new is True:
-                filebasename = _extract_filename(filename)
-                return isamAppliance.invoke_post_files(
-                "Import a new FIDO2 Metadata file",
-                "{0}".format(uri),
+        if not import_new:
+            return isamAppliance.invoke_post_files(
+                "Import a FIDO2 Metadata file (replace)",
+                "{0}/{1}/file".format(uri,ret_obj['data']),
                 [
                     {
                         'file_formfield': 'file',
@@ -122,25 +118,25 @@ def import_file(isamAppliance, filename, check_mode=False, force=False):
                         'mimetype': 'application/file'
                     }
                 ],
-                {
-                    "name": filebasename,
-                    "filename": filebasename
-                },
+                {},
                 requires_modules=requires_modules, requires_version=requires_version)
-            else:
-                return isamAppliance.invoke_post_files(
-                    "Import a FIDO2 Metadata file (replace)",
-                    "{0}/{1}/file".format(uri,ret_obj['data']),
-                    [
-                        {
-                            'file_formfield': 'file',
-                            'filename': filename,
-                            'mimetype': 'application/file'
-                        }
-                    ],
-                    {},
-                    requires_modules=requires_modules, requires_version=requires_version)
 
+        filebasename = _extract_filename(filename)
+        return isamAppliance.invoke_post_files(
+        "Import a new FIDO2 Metadata file",
+        "{0}".format(uri),
+        [
+            {
+                'file_formfield': 'file',
+                'filename': filename,
+                'mimetype': 'application/file'
+            }
+        ],
+        {
+            "name": filebasename,
+            "filename": filebasename
+        },
+        requires_modules=requires_modules, requires_version=requires_version)
     return isamAppliance.create_return_object()
 
 def _get(isamAppliance, id):
@@ -163,7 +159,7 @@ def _check(isamAppliance, fido2_metadata):
     logger.debug("Comparing server FIDO2 metadata configuration with desired configuration.")
     # Converting python ret_obj['data'] dict to valid JSON (RFC 8259)
     # e.g. converts python boolean 'True' -> to JSON literal lowercase value 'true'
-    cur_json_string = json.dumps(ret_obj['data']) 
+    cur_json_string = json.dumps(ret_obj['data'])
     cur_sorted_json = tools.json_sort(cur_json_string)
     logger.debug("Server JSON : {0}".format(cur_sorted_json))
     given_json_string = json.dumps(fido2_metadata)
@@ -171,7 +167,5 @@ def _check(isamAppliance, fido2_metadata):
     logger.debug("Desired JSON: {0}".format(given_sorted_json))
     if cur_sorted_json != given_sorted_json:
         return False
-        logger.debug("Changes detected!")
-    else:
-        logger.debug("Server configuration is identical with desired configuration. No change necessary.")
-        return True
+    logger.debug("Server configuration is identical with desired configuration. No change necessary.")
+    return True

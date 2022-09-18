@@ -24,10 +24,7 @@ def add(isamAppliance, admin_id, admin_pwd, admin_domain="Default", check_mode=F
     """
     exist, warnings = _check(isamAppliance)
 
-    if force is True or exist is False:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-    else:
+    if force is not True and exist is not False:
         return isamAppliance.invoke_post("Store the ISAM administrator credentials",
                                          "{0}".format(uri),
                                          {
@@ -37,6 +34,8 @@ def add(isamAppliance, admin_id, admin_pwd, admin_domain="Default", check_mode=F
                                          },
                                          requires_modules=requires_modules, requires_version=requires_version)
 
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
     return isamAppliance.create_return_object(warnings=warnings)
 
 
@@ -59,9 +58,7 @@ def delete(isamAppliance, check_mode=False, force=False):
 
 def _check(isamAppliance, check_mode=False, force=False):
     ret_obj = get(isamAppliance)
-    if ret_obj['data'] == {}:
-        return False, ret_obj['warnings']
-    elif ret_obj['data']['admin_id'] is None:
+    if ret_obj['data'] == {} or ret_obj['data']['admin_id'] is None:
         return False, ret_obj['warnings']
     else:
         return True, ret_obj['warnings']

@@ -28,11 +28,12 @@ def get(isamAppliance, name, check_mode=False, force=False):
     """
     ret_obj = search(isamAppliance, name, check_mode, force)
 
-    warnings = []
-    if ret_obj['data'] == {}:
-        return isamAppliance.create_return_object(warnings=["Access policy with name {} not found.".format(name)])
-    else:
+    if ret_obj['data'] != {}:
         return _get(isamAppliance, ret_obj['data'])
+    warnings = []
+    return isamAppliance.create_return_object(
+        warnings=[f"Access policy with name {name} not found."]
+    )
 
 
 def _get(isamAppliance, access_policy_id):
@@ -69,9 +70,8 @@ def set(isamAppliance, name, file=None, content=None, type='JavaScript', categor
         if file is None or file == '':
             return isamAppliance.create_return_object(
                 warnings=["Need to pass content or file for set() to work."])
-        else:
-            with open(file, 'r') as contentFile:
-                content = contentFile.read()
+        with open(file, 'r') as contentFile:
+            content = contentFile.read()
     ret_obj = search(isamAppliance, name=name)
     if ret_obj['data'] == {}:
         # Force the add - we already know connection does not exist
@@ -116,8 +116,11 @@ def delete(isamAppliance, name, check_mode=False, force=False):
         else:
             return isamAppliance.invoke_delete(
                 "Delete an access policy",
-                "{}{}".format(uri, ret_obj['data']), requires_modules=requires_modules,
-                requires_version=requires_version)
+                f"{uri}{ret_obj['data']}",
+                requires_modules=requires_modules,
+                requires_version=requires_version,
+            )
+
 
     return isamAppliance.create_return_object()
 
@@ -129,23 +132,24 @@ def update(isamAppliance, name, content, check_mode=False, force=False):
     update_required = False
     ret_obj = search(isamAppliance, name)
     id = ret_obj['data']
-    if force is False:
-        if id:
-            ret_obj_content = _get(isamAppliance, id)
-            # Having to strip whitespace to get a good comparison (suspect carriage returns added after save happens)
-            if (ret_obj_content['data']['properties']['content']).strip() != (content).strip():
-                update_required = True
+    if force is False and id:
+        ret_obj_content = _get(isamAppliance, id)
+        # Having to strip whitespace to get a good comparison (suspect carriage returns added after save happens)
+        if (ret_obj_content['data']['properties']['content']).strip() != (content).strip():
+            update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
             return isamAppliance.invoke_put(
                 "Update a specified access policy",
-                "{}{}".format(uri, id),
-                {
-                    'content': content
-                }, requires_modules=requires_modules, requires_version=requires_version)
+                f"{uri}{id}",
+                {'content': content},
+                requires_modules=requires_modules,
+                requires_version=requires_version,
+            )
+
 
     return isamAppliance.create_return_object()
 
@@ -158,13 +162,19 @@ def export_file(isamAppliance, name, filename, check_mode=False, force=False):
     if force is False:
         ret_obj = search(isamAppliance, name)
 
-    if force is True or (ret_obj['data'] != {} and os.path.exists(filename) is False):
-        if check_mode is False:  # No point downloading a file if in check_mode
-            id = ret_obj['data']
-            return isamAppliance.invoke_get_file(
-                "Export a specific access policy",
-                "{}{}/file".format(uri, id),
-                filename, requires_modules=requires_modules, requires_version=requires_version)
+    if (
+        force is True
+        or (ret_obj['data'] != {} and os.path.exists(filename) is False)
+    ) and check_mode is False:
+        id = ret_obj['data']
+        return isamAppliance.invoke_get_file(
+            "Export a specific access policy",
+            f"{uri}{id}/file",
+            filename,
+            requires_modules=requires_modules,
+            requires_version=requires_version,
+        )
+
 
     return isamAppliance.create_return_object()
 
@@ -210,21 +220,25 @@ def import_file(isamAppliance, name, file, check_mode=False, force=False):
             if (ret_obj_content['data']['properties']['content']).strip() != content.strip():
                 update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:
             return isamAppliance.invoke_post_files(
                 "Import a access policy",
-                "{}{}/file".format(uri, ret_obj['data']),
+                f"{uri}{ret_obj['data']}/file",
                 [
                     {
                         'file_formfield': 'file',
                         'filename': file,
-                        'mimetype': 'application/file'
+                        'mimetype': 'application/file',
                     }
                 ],
-                {}, requires_modules=requires_modules, requires_version=requires_version)
+                {},
+                requires_modules=requires_modules,
+                requires_version=requires_version,
+            )
+
 
     return isamAppliance.create_return_object()
 

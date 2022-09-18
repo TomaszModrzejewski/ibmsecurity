@@ -15,25 +15,24 @@ def import_file(isamAppliance, filename, check_mode=False, force=False):
 
     """
 
-    if check_mode is True:
-        return isamAppliance.create_return_object(changed=True)
-    else:
-
-        return isamAppliance.invoke_post_files(
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_post_files(
             "Import sdconf.rec",
             "{0}/sdconf.rec".format(uri),
             [
                 {
                     'file_formfield': 'file',
                     'filename': filename,
-                    'mimetype': 'application/file'
+                    'mimetype': 'application/file',
                 }
             ],
             {},
-            requires_modules=requires_modules, requires_version=requires_version
+            requires_modules=requires_modules,
+            requires_version=requires_version,
         )
-
-    return isamAppliance.create_return_object()
+    )
 
 
 def delete(isamAppliance, check_mode=False, force=False):
@@ -43,14 +42,12 @@ def delete(isamAppliance, check_mode=False, force=False):
     """
 
     ret_obj = get(isamAppliance)
-    delete_required = False
+    delete_required = any(
+        obj['fileName'] == "sdconf.rec" and 'importTimestamp' in obj
+        for obj in ret_obj['data']
+    )
 
-    for obj in ret_obj['data']:
-        if obj['fileName'] == "sdconf.rec":
-            if 'importTimestamp' in obj:
-                delete_required = True
-
-    if force is True or delete_required is True:
+    if force is True or delete_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

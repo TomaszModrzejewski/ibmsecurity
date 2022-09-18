@@ -83,13 +83,12 @@ def _check(isamAppliance, state_id, isEnabled=None, attributes=None):
         if ret_obj['data']['id'] == state_id:
             if isEnabled is None and attributes is None:
                 return True
-            else:
-                if ret_obj['data']['isEnabled'] != isEnabled:
-                    return True
-                import ibmsecurity.utilities.tools
-                if ibmsecurity.utilities.tools.json_sort(
-                        ret_obj['data']['attributes']) != ibmsecurity.utilities.tools.json_sort(attributes):
-                    return True
+            if ret_obj['data']['isEnabled'] != isEnabled:
+                return True
+            import ibmsecurity.utilities.tools
+            if ibmsecurity.utilities.tools.json_sort(
+                    ret_obj['data']['attributes']) != ibmsecurity.utilities.tools.json_sort(attributes):
+                return True
     except:
         pass
 

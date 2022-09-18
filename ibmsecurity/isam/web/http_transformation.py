@@ -91,12 +91,11 @@ def update(isamAppliance, id, content, check_mode=False, force=False):
     update_required = False
     ret_obj_content = get(isamAppliance, id)
     if ret_obj_content['data'] == {}:
-        warnings.append("HTTP Transformation {} not found. Skipping update.".format(id))
-    # Having to strip whitespace to get a good comparison (suspect carriage returns added after save happens)
+        warnings.append(f"HTTP Transformation {id} not found. Skipping update.")
     elif (ret_obj_content['data']['contents']).strip() != (content).strip():
         update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -115,12 +114,13 @@ def export_file(isamAppliance, id, filename, check_mode=False, force=False):
     """
     Exporting a HTTP Transformation
     """
-    if force is True or _check(isamAppliance, id) is True:
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a HTTP Transformation",
-                "/wga/http_transformation_rules/{0}?export".format(id),
-                filename)
+    if (
+        force is True or _check(isamAppliance, id) is True
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a HTTP Transformation",
+            "/wga/http_transformation_rules/{0}?export".format(id),
+            filename)
 
     return isamAppliance.create_return_object()
 
@@ -135,15 +135,15 @@ def export_template_file(isamAppliance, id, filename, check_mode=False, force=Fa
         warnings = ["File '{0}' already exists.  Skipping export.".format(filename)]
         return isamAppliance.create_return_object(warnings=warnings)
 
-    if check_mode is True:
-        return isamAppliance.create_return_object(changed=True)
-    else:
-        return isamAppliance.invoke_get_file(
+    return (
+        isamAppliance.create_return_object(changed=True)
+        if check_mode is True
+        else isamAppliance.invoke_get_file(
             "Exporting an HTTP Transformation Rule file template",
             "/isam/wga_templates/{0}?export".format(id),
-            filename)
-
-    return isamAppliance.create_return_object()
+            filename,
+        )
+    )
 
 
 def import_file(isamAppliance, filename, id=None, check_mode=False, force=False):
@@ -175,11 +175,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def _check_import(isamAppliance, filename, check_mode=False):

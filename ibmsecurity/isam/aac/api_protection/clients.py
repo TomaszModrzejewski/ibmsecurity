@@ -24,14 +24,13 @@ def get(isamAppliance, name, check_mode=False, force=False):
     """
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     client_id = ret_obj['data']
+    if client_id != {}:
+        return _get(isamAppliance, client_id)
+    logger.info("Client {0} had no match, skipping retrieval.".format(name))
     warnings = ret_obj["warnings"]
 
-    if client_id == {}:
-        logger.info("Client {0} had no match, skipping retrieval.".format(name))
-        warnings.append("Client Name {0} had no match.".format(name))
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
-        return _get(isamAppliance, client_id)
+    warnings.append("Client Name {0} had no match.".format(name))
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _get(isamAppliance, client_id):
@@ -128,78 +127,77 @@ def add(isamAppliance, name, definitionName, companyName, redirectUri=None, comp
     if force is True or ret_obj["data"] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            # Create a simple json with just the main client attributes
-            client_json = {
-                "name": name,
-                "definition": definition,
-                "companyName": companyName
-            }
-            # Add attributes that have been supplied... otherwise skip them.
-            if redirectUri is not None:
-                client_json["redirectUri"] = redirectUri
-            if companyUrl is not None:
-                client_json["companyUrl"] = companyUrl
-            if contactPerson is not None:
-                client_json["contactPerson"] = contactPerson
-            if contactType is not None:
-                client_json["contactType"] = contactType
-            if email is not None:
-                client_json["email"] = email
-            if phone is not None:
-                client_json["phone"] = phone
-            if otherInfo is not None:
-                client_json["otherInfo"] = otherInfo
-            if clientId is not None:
-                client_json["clientId"] = clientId
-            if clientSecret is not None:
-                client_json["clientSecret"] = clientSecret
-            if requirePkce is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, requirePkce: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring requirePkce for this call.".format(
-                            isamAppliance.facts["version"], requirePkce))
-                else:
-                    client_json["requirePkce"] = requirePkce
-            if encryptionDb is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, encryptionDb: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring encryptionDb for this call.".format(
-                            isamAppliance.facts["version"], encryptionDb))
-                else:
-                    client_json["encryptionDb"] = encryptionDb
-            if encryptionCert is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, encryptionCert: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring encryptionCert for this call.".format(
-                            isamAppliance.facts["version"], encryptionCert))
-                else:
-                    client_json["encryptionCert"] = encryptionCert
-            if jwksUri is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, jwksUri: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring jwksUri for this call.".format(
-                            isamAppliance.facts["version"], jwksUri))
-                else:
-                    client_json["jwksUri"] = jwksUri
-            if extProperties is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, extProperties: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring extProperties for this call.".format(
-                            isamAppliance.facts["version"], extProperties))
-                else:
-                    client_json["extProperties"] = extProperties
-            if introspectWithSecret is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.7.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, introspectWithSecret: {1} is not supported. Needs 9.0.7.0 or higher. Ignoring introspectWithSecret for this call.".format(
-                            isamAppliance.facts["version"], introspectWithSecret))
-                else:
-                    client_json["introspectWithSecret"] = introspectWithSecret
+        # Create a simple json with just the main client attributes
+        client_json = {
+            "name": name,
+            "definition": definition,
+            "companyName": companyName
+        }
+        # Add attributes that have been supplied... otherwise skip them.
+        if redirectUri is not None:
+            client_json["redirectUri"] = redirectUri
+        if companyUrl is not None:
+            client_json["companyUrl"] = companyUrl
+        if contactPerson is not None:
+            client_json["contactPerson"] = contactPerson
+        if contactType is not None:
+            client_json["contactType"] = contactType
+        if email is not None:
+            client_json["email"] = email
+        if phone is not None:
+            client_json["phone"] = phone
+        if otherInfo is not None:
+            client_json["otherInfo"] = otherInfo
+        if clientId is not None:
+            client_json["clientId"] = clientId
+        if clientSecret is not None:
+            client_json["clientSecret"] = clientSecret
+        if requirePkce is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, requirePkce: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring requirePkce for this call.".format(
+                        isamAppliance.facts["version"], requirePkce))
+            else:
+                client_json["requirePkce"] = requirePkce
+        if encryptionDb is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, encryptionDb: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring encryptionDb for this call.".format(
+                        isamAppliance.facts["version"], encryptionDb))
+            else:
+                client_json["encryptionDb"] = encryptionDb
+        if encryptionCert is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, encryptionCert: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring encryptionCert for this call.".format(
+                        isamAppliance.facts["version"], encryptionCert))
+            else:
+                client_json["encryptionCert"] = encryptionCert
+        if jwksUri is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, jwksUri: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring jwksUri for this call.".format(
+                        isamAppliance.facts["version"], jwksUri))
+            else:
+                client_json["jwksUri"] = jwksUri
+        if extProperties is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, extProperties: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring extProperties for this call.".format(
+                        isamAppliance.facts["version"], extProperties))
+            else:
+                client_json["extProperties"] = extProperties
+        if introspectWithSecret is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.7.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, introspectWithSecret: {1} is not supported. Needs 9.0.7.0 or higher. Ignoring introspectWithSecret for this call.".format(
+                        isamAppliance.facts["version"], introspectWithSecret))
+            else:
+                client_json["introspectWithSecret"] = introspectWithSecret
 
-            return isamAppliance.invoke_post(
-                "Create an API protection definition", uri, client_json, requires_modules=requires_modules,
-                requires_version=requires_version, warnings=warnings)
+        return isamAppliance.invoke_post(
+            "Create an API protection definition", uri, client_json, requires_modules=requires_modules,
+            requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -214,13 +212,12 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if client_id == {}:
         logger.info("Client {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete an API protection client registration", "{0}/{1}".format(uri, client_id),
-                requires_modules=requires_modules, requires_version=requires_version, warnings=warnings)
+        return isamAppliance.invoke_delete(
+            "Delete an API protection client registration", "{0}/{1}".format(uri, client_id),
+            requires_modules=requires_modules, requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 

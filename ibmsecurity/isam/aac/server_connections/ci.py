@@ -70,13 +70,12 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     if force is True or _check_exists(isamAppliance, name=name) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            ret_obj = search(isamAppliance, name=name)
-            id = ret_obj['data']
-            return isamAppliance.invoke_delete(
-                "Deleting a CI server connection",
-                "/mga/server_connections/ci/{0}/v1".format(id), requires_modules=requires_modules,
-                requires_version=requires_version)
+        ret_obj = search(isamAppliance, name=name)
+        id = ret_obj['data']
+        return isamAppliance.invoke_delete(
+            "Deleting a CI server connection",
+            "/mga/server_connections/ci/{0}/v1".format(id), requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -104,10 +103,9 @@ def update(isamAppliance, name, connection, description='', locked=False, new_na
     if force is not True:
         if 'uuid' in ret_obj['data']:
             del ret_obj['data']['uuid']
-        if ignore_password_for_idempotency:
-            if 'clientSecret' in connection:
-                warnings.append("Request made to ignore clientSecret for idempotency check.")
-                connection.pop('clientSecret', None)
+        if ignore_password_for_idempotency and 'clientSecret' in connection:
+            warnings.append("Request made to ignore clientSecret for idempotency check.")
+            connection.pop('clientSecret', None)
 
         sorted_ret_obj = tools.json_sort(ret_obj['data'])
         sorted_json_data = tools.json_sort(json_data)
@@ -117,7 +115,7 @@ def update(isamAppliance, name, connection, description='', locked=False, new_na
         if sorted_ret_obj != sorted_json_data:
             needs_update = True
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -133,15 +131,13 @@ def _create_json(name, description, locked, connection):
     """
     Create a JSON to be used for the REST API call
     """
-    json = {
+    return {
         "connection": connection,
         "type": "ci",
         "name": name,
         "description": description,
-        "locked": locked
+        "locked": locked,
     }
-
-    return json
 
 
 def search(isamAppliance, name):
@@ -165,11 +161,11 @@ def _check_exists(isamAppliance, name=None, id=None):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if (name is not None and obj['name'] == name) or (id is not None and obj['uuid'] == id):
-            return True
-
-    return False
+    return any(
+        (name is not None and obj['name'] == name)
+        or (id is not None and obj['uuid'] == id)
+        for obj in ret_obj['data']
+    )
 
 
 def compare(isamAppliance1, isamAppliance2):

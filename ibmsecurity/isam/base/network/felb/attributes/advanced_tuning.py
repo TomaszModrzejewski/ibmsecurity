@@ -99,16 +99,12 @@ def _check(isamAppliance, attribute_name, attribute_value):
         check_value = True
         return check_value, warnings
 
-    if 'value' in temp_obj['data']:
-        if temp_obj['data']['value'] != attribute_value:
-            check_value = True
-            return check_value, warnings
-        else:
-            check_value = False
-            return check_value, warnings
-    else:
-        check_value = False
-        return check_value, warnings
+    check_value = (
+        'value' in temp_obj['data']
+        and temp_obj['data']['value'] != attribute_value
+    )
+
+    return check_value, warnings
 
 
 def search(isamAppliance, attribute_name):
@@ -142,8 +138,7 @@ def compare(isamAppliance1, isamAppliance2):
     warnings = []
 
     if "Docker" in obj1_warnings or "Docker" in obj2_warnings:
-        warnings.append(obj1_warnings)
-        warnings.append(obj2_warnings)
+        warnings.extend((obj1_warnings, obj2_warnings))
         return isamAppliance1.create_return_object(changed=False, warnings=warnings)
 
     obj1 = {'rc': 0, 'data': [], 'warnings': []}

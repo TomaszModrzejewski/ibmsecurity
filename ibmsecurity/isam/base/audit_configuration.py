@@ -181,15 +181,9 @@ def _check(isamAppliance, id, config, enabled, type, verbose):
             cfg['value'] = str(cfg['value'])
     # Ensure boolean variables are set correctly
     if isinstance(verbose, basestring):
-        if verbose.lower() == "true":
-            verbose = True
-        else:
-            verbose = False
+        verbose = verbose.lower() == "true"
     if isinstance(enabled, basestring):
-        if enabled.lower() == "true":
-            enabled = True
-        else:
-            enabled = False
+        enabled = enabled.lower() == "true"
     json_data = {
         "id": id,
         "config": config,

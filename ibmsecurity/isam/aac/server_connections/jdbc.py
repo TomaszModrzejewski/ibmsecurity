@@ -69,12 +69,11 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     if force is True or _check_exists(isamAppliance, name=name) is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            ret_obj = search(isamAppliance, name=name)
-            id = ret_obj['data']
-            return isamAppliance.invoke_delete(
-                "Deleting a JDBC server connection",
-                "/mga/server_connections/jdbc/{0}/v1".format(id))
+        ret_obj = search(isamAppliance, name=name)
+        id = ret_obj['data']
+        return isamAppliance.invoke_delete(
+            "Deleting a JDBC server connection",
+            "/mga/server_connections/jdbc/{0}/v1".format(id))
 
     return isamAppliance.create_return_object()
 
@@ -104,10 +103,9 @@ def update(isamAppliance, name, connection, type, jndiId, description='', locked
     if force is not True:
         if 'uuid' in ret_obj['data']:
             del ret_obj['data']['uuid']
-        if ignore_password_for_idempotency:
-            if 'password' in connection:
-                warnings.append("Request made to ignore password for idempotency check.")
-                connection.pop('password', None)
+        if ignore_password_for_idempotency and 'password' in connection:
+            warnings.append("Request made to ignore password for idempotency check.")
+            connection.pop('password', None)
 
         sorted_ret_obj = tools.json_sort(ret_obj['data'])
         sorted_json_data = tools.json_sort(json_data)
@@ -117,7 +115,7 @@ def update(isamAppliance, name, connection, type, jndiId, description='', locked
         if sorted_ret_obj != sorted_json_data:
             needs_update = True
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:
@@ -169,11 +167,11 @@ def _check_exists(isamAppliance, name=None, id=None):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if (name is not None and obj['name'] == name) or (id is not None and obj['uuid'] == id):
-            return True
-
-    return False
+    return any(
+        (name is not None and obj['name'] == name)
+        or (id is not None and obj['uuid'] == id)
+        for obj in ret_obj['data']
+    )
 
 
 def compare(isamAppliance1, isamAppliance2):

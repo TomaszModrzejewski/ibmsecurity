@@ -35,7 +35,7 @@ def update(isamAppliance, aliasDBType, properties=None, check_mode=False, force=
     else:
         update_required = True
 
-    if force is True or update_required is True:
+    if force is True or update_required:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
         else:

@@ -187,13 +187,14 @@ def import_file(isamAppliance, path, filename, file_path, check_mode=False, forc
 
 def _check_contents(isamAppliance, path, filename, contents):
     ret_obj = get_contents(isamAppliance, path, filename)
-    if 'contents' in ret_obj['data']:
-        if (ret_obj['data']['contents']) == contents:
-            return False, ret_obj['warnings']
-        else:
-            return True, ret_obj['warnings']
-    else:
+    if (
+        'contents' in ret_obj['data']
+        and (ret_obj['data']['contents']) == contents
+        or 'contents' not in ret_obj['data']
+    ):
         return False, ret_obj['warnings']
+    else:
+        return True, ret_obj['warnings']
 
 
 def _check_import(isamAppliance, path, filename, file_path):
@@ -201,19 +202,20 @@ def _check_import(isamAppliance, path, filename, file_path):
 
     import os
     if os.path.exists(file_path) is False:
-        warnings = file_path + " does not exist."
+        warnings = f"{file_path} does not exist."
         return False, [warnings]
 
     with open(file_path, 'r') as infile:
         input_contents = infile.read()
 
-    if 'contents' in ret_obj['data']:
-        if (ret_obj['data']['contents']) == input_contents:
-            return False, ret_obj['warnings']
-        else:
-            return True, ret_obj['warnings']
-    else:
+    if (
+        'contents' in ret_obj['data']
+        and (ret_obj['data']['contents']) == input_contents
+        or 'contents' not in ret_obj['data']
+    ):
         return False, ret_obj['warnings']
+    else:
+        return True, ret_obj['warnings']
 
 
 def _check(isamAppliance, key, value, sensitive):
@@ -227,10 +229,7 @@ def _check(isamAppliance, key, value, sensitive):
     for obj in ret_obj['data']:
         if obj['key'] == key:
             id = obj['id']
-            if obj['value'] == value and obj['sensitive'] == sensitive:
-                matches = True
-            else:
-                matches = False
+            matches = obj['value'] == value and obj['sensitive'] == sensitive
             break
 
     return id, matches

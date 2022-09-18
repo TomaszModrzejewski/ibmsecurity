@@ -44,17 +44,14 @@ def delete(isamAppliance, service_name, address, port, check_mode=False, force=F
     """
 
     check_exist, warnings = _check_exist(isamAppliance, service_name, address, port)
-    if force is True or check_exist is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            id = address + ":" + str(port)
-            return isamAppliance.invoke_delete("Deleting a server",
-                                               "{0}/{1}/servers/{2}".format(module_uri, service_name, id),
-                                               requires_version=requires_version, requires_modules=requires_modules, requires_model=requires_model)
-
-    else:
+    if force is not True and check_exist is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    id = f"{address}:{str(port)}"
+    return isamAppliance.invoke_delete("Deleting a server",
+                                       "{0}/{1}/servers/{2}".format(module_uri, service_name, id),
+                                       requires_version=requires_version, requires_modules=requires_modules, requires_model=requires_model)
 
 
 def get(isamAppliance, service_name, address, port, check_mode=False, force=False):
@@ -62,7 +59,7 @@ def get(isamAppliance, service_name, address, port, check_mode=False, force=Fals
     Retrieves server from specified service name
     """
 
-    id = address + ":" + str(port)
+    id = f"{address}:{str(port)}"
     return (isamAppliance.invoke_get("Retrieving a server", "{0}/{1}/servers/{2}".format(module_uri, service_name, id),
                                  requires_version=requires_version, requires_modules=requires_modules, requires_model=requires_model))
 
@@ -80,17 +77,16 @@ def update(isamAppliance, service_name, address, active, port, weight, secure=Fa
     """
     Updating server
     """
-    id = address + ":" + str(port)
-    json_data = {'active': active, 'secure': secure, 'ssllabel': ssllabel, 'weight': weight}
-    if new_address is not None:
-        json_data['address'] = new_address
-    else:
-        json_data['address'] = address
+    id = f"{address}:{str(port)}"
+    json_data = {
+        'active': active,
+        'secure': secure,
+        'ssllabel': ssllabel,
+        'weight': weight,
+        'address': new_address if new_address is not None else address,
+        'port': new_port if new_port is not None else port,
+    }
 
-    if new_port is not None:
-        json_data['port'] = new_port
-    else:
-        json_data['port'] = port
     change_required, warnings = _check_update(isamAppliance, service_name, address, port, json_data)
 
     if force is True or change_required is True:
@@ -139,15 +135,14 @@ def _check_exist(isamAppliance, service_name, address, port):
     idempotency test for delete function
     """
 
-    id = address + ":" + str(port)
+    id = f"{address}:{str(port)}"
     ret_obj = get_all(isamAppliance, service_name)
     warnings = ret_obj['warnings']
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True, warnings
-
-    return False, warnings
+    return next(
+        ((True, warnings) for obj in ret_obj['data'] if obj['id'] == id),
+        (False, warnings),
+    )
 
 
 def compare(isamAppliance1, service_name1, isamAppliance2, service_name2):

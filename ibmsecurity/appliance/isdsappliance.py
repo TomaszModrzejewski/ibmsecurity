@@ -18,23 +18,19 @@ class ISDSAppliance(IBMAppliance):
     def __init__(self, hostname, user, lmi_port=443):
         self.logger = logging.getLogger(__name__)
         self.logger.debug('Creating an ISDSAppliance')
-        if isinstance(lmi_port, basestring):
-            self.lmi_port = int(lmi_port)
-        else:
-            self.lmi_port = lmi_port
-
+        self.lmi_port = int(lmi_port) if isinstance(lmi_port, basestring) else lmi_port
         IBMAppliance.__init__(self, hostname, user)
 
     def _url(self, uri):
         # Build up the URL
-        url = "https://" + self.hostname + ":" + str(self.lmi_port) + uri
-        self.logger.debug("Issuing request to: " + url)
+        url = f"https://{self.hostname}:{str(self.lmi_port)}{uri}"
+        self.logger.debug(f"Issuing request to: {url}")
 
         return url
 
     def _log_desc(self, description):
         if description != "":
-            self.logger.info('*** ' + description + ' ***')
+            self.logger.info(f'*** {description} ***')
 
     def _suppress_ssl_warning(self):
         # Disable https warning because of non-standard certs on appliance
@@ -49,11 +45,11 @@ class ISDSAppliance(IBMAppliance):
         return_obj['rc'] = http_response.status_code
 
         # Examine the response.
-        if (http_response.status_code != 200 and http_response.status_code != 204 and http_response.status_code != 201):
+        if http_response.status_code not in [200, 204, 201]:
             self.logger.error("  Request failed: ")
             self.logger.error("     status code: {0}".format(http_response.status_code))
             if http_response.text != "":
-                self.logger.error("     text: " + http_response.text)
+                self.logger.error(f"     text: {http_response.text}")
             if not ignore_error:
                 raise IBMError("HTTP Return code: {0}".format(http_response.status_code), http_response.text)
             return_obj['changed'] = False  # force changed to be False as there is an error
@@ -72,17 +68,16 @@ class ISDSAppliance(IBMAppliance):
             self.logger.debug("Text: " + http_response.content.decode("utf-8"))
 
         for key in http_response.headers:
-            if key == 'g-type':
-                if http_response.headers[key] == 'application/octet-stream; charset=UTF-8':
-                    json_data = {}
-                    return_obj.data = http_response.content
-                    return
+            if (
+                key == 'g-type'
+                and http_response.headers[key]
+                == 'application/octet-stream; charset=UTF-8'
+            ):
+                json_data = {}
+                return_obj.data = http_response.content
+                return
 
-        if http_response.text == "":
-            json_data = {}
-        else:
-            json_data = json.loads(http_response.text)
-
+        json_data = {} if http_response.text == "" else json.loads(http_response.text)
         return_obj['data'] = json_data
 
     def _process_connection_error(self, ignore_error, return_obj):
@@ -97,12 +92,16 @@ class ISDSAppliance(IBMAppliance):
         # flag to indicate if processing needs to return and not continue
         return_call = False
         self.logger.debug("Checking for minimum version: {0}.".format(requires_version))
-        if requires_version is not None and 'version' in self.facts and self.facts['version'] is not None:
-            if self.facts['version'] < requires_version:
-                return_call = True
-                warnings.append(
-                    "API invoked requires minimum version: {0}, appliance is of lower version: {1}.".format(
-                        requires_version, self.facts['version']))
+        if (
+            requires_version is not None
+            and 'version' in self.facts
+            and self.facts['version'] is not None
+            and self.facts['version'] < requires_version
+        ):
+            return_call = True
+            warnings.append(
+                "API invoked requires minimum version: {0}, appliance is of lower version: {1}.".format(
+                    requires_version, self.facts['version']))
         # Detecting modules from uri if none is provided
         if requires_modules is None and not requires_modules:
             if uri.startswith("/wga"):
@@ -115,15 +114,17 @@ class ISDSAppliance(IBMAppliance):
         self.logger.debug("Checking for one of required modules: {0}.".format(requires_modules))
         if requires_modules is not None and requires_modules:
             if 'activations' in self.facts and self.facts['activations']:
-                # Find intersection of the two lists
-                iactive = [ia for ia in self.facts['activations'] if ia in requires_modules]
-                if not iactive:
+                if iactive := [
+                    ia
+                    for ia in self.facts['activations']
+                    if ia in requires_modules
+                ]:
+                    self.logger.info("Modules satisfying requirement: {0}".format(iactive))
+                else:
                     return_call = True
                     warnings.append(
                         "API invoked requires one of modules: {0}, appliance has these modules active: {1}.".format(
                             requires_modules, self.facts['activations']))
-                else:
-                    self.logger.info("Modules satisfying requirement: {0}".format(iactive))
             else:
                 return_call = True
                 warnings.append("API invoked requires module: {0}, appliance has no modules active.".format(
@@ -157,11 +158,17 @@ class ISDSAppliance(IBMAppliance):
             }
         self.logger.debug("Headers are: {0}".format(headers))
 
-        files = list()
-        for file2post in fileinfo:
-            files.append((file2post['file_formfield'],
-                          (tools.path_leaf(file2post['filename']), open(file2post['filename'], 'rb'),
-                           file2post['mimetype'])))
+        files = [
+            (
+                file2post['file_formfield'],
+                (
+                    tools.path_leaf(file2post['filename']),
+                    open(file2post['filename'], 'rb'),
+                    file2post['mimetype'],
+                ),
+            )
+            for file2post in fileinfo
+        ]
 
         self._suppress_ssl_warning()
 
@@ -201,11 +208,18 @@ class ISDSAppliance(IBMAppliance):
         }
         self.logger.debug("Headers are: {0}".format(headers))
 
-        files = list()
+        files = [
+            (
+                file2post['file_formfield'],
+                (
+                    file2post['filename'],
+                    open(file2post['filename'], 'rb'),
+                    file2post['mimetype'],
+                ),
+            )
+            for file2post in fileinfo
+        ]
 
-        for file2post in fileinfo:
-            files.append((file2post['file_formfield'],
-                          (file2post['filename'], open(file2post['filename'], 'rb'), file2post['mimetype'])))
 
         self._suppress_ssl_warning()
 
@@ -254,33 +268,32 @@ class ISDSAppliance(IBMAppliance):
             r = requests.get(url=self._url(uri=uri), auth=(self.user.username, self.user.password), verify=False,
                              stream=True, headers=headers)
 
-            if (r.status_code != 200 and r.status_code != 204 and r.status_code != 201):
+            if r.status_code not in [200, 204, 201]:
                 self.logger.error("  Request failed: ")
                 self.logger.error("     status code: {0}".format(r.status_code))
                 if r.text != "":
-                    self.logger.error("     text: " + r.text)
+                    self.logger.error(f"     text: {r.text}")
                 if not ignore_error:
                     raise IBMError("HTTP Return code: {0}".format(r.status_code), r.text)
-                else:
-                    return_obj['rc'] = r.status_code
-                    return_obj['data'] = {'msg': 'Unable to extract contents to file!'}
+                return_obj['rc'] = r.status_code
+                return_obj['data'] = {'msg': 'Unable to extract contents to file!'}
             else:
                 with open(filename, 'wb') as f:
                     for chunk in r.iter_content(chunk_size=1024):
                         if chunk:  # filter out keep-alive new chunks
                             f.write(chunk)
                 return_obj['rc'] = 0
-                return_obj['data'] = {'msg': 'Contents extracted to file: ' + filename}
+                return_obj['data'] = {'msg': f'Contents extracted to file: {filename}'}
 
         except requests.exceptions.ConnectionError:
             self._process_connection_error(ignore_error=ignore_error, return_obj=return_obj)
 
         except IOError:
             if not ignore_error:
-                self.logger.critical("Failed to write to file: " + filename)
-                raise IBMError("HTTP Return code: 999", "Failed to write to file: " + filename)
+                self.logger.critical(f"Failed to write to file: {filename}")
+                raise IBMError("HTTP Return code: 999", f"Failed to write to file: {filename}")
             else:
-                self.logger.debug("Failed to write to file: " + filename)
+                self.logger.debug(f"Failed to write to file: {filename}")
                 return_obj['rc'] = 999
 
         return return_obj
@@ -310,12 +323,12 @@ class ISDSAppliance(IBMAppliance):
         # Process the input data into JSON
         json_data = json.dumps(data)
 
-        self.logger.debug("Input Data: " + json_data)
+        self.logger.debug(f"Input Data: {json_data}")
 
         self._suppress_ssl_warning()
 
         try:
-            if func == requests.get or func == requests.delete:
+            if func in [requests.get, requests.delete]:
 
                 if data != {}:
                     r = func(url=self._url(uri), data=json_data, auth=(self.user.username, self.user.password),

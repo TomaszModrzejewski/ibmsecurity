@@ -32,14 +32,13 @@ def get(isamAppliance, name, check_mode=False, force=False):
     """
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     defn_id = ret_obj['data']
+    if defn_id != {}:
+        return _get(isamAppliance, defn_id)
+    logger.info("Definition {0} had no match, skipping retrieval.".format(name))
     warnings = ret_obj["warnings"]
 
-    if defn_id == {}:
-        logger.info("Definition {0} had no match, skipping retrieval.".format(name))
-        warnings.append("Definition Name {0} had no match.".format(name))
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
-        return _get(isamAppliance, defn_id)
+    warnings.append("Definition Name {0} had no match.".format(name))
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _get(isamAppliance, defn_id):
@@ -86,67 +85,76 @@ def add(isamAppliance, name, description="", accessPolicyName=None, grantTypes=[
     if force is True or ret_obj["data"] == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            json_data = {
-                "name": name,
-                "description": description,
-                "grantTypes": grantTypes,
-                "tcmBehavior": tcmBehavior,
-                "accessTokenLifetime": int(accessTokenLifetime),
-                "accessTokenLength": int(accessTokenLength),
-                "enforceSingleUseAuthorizationGrant": enforceSingleUseAuthorizationGrant,
-                "authorizationCodeLifetime": int(authorizationCodeLifetime),
-                "authorizationCodeLength": int(authorizationCodeLength),
-                "issueRefreshToken": issueRefreshToken,
-                "refreshTokenLength": int(refreshTokenLength),
-                "maxAuthorizationGrantLifetime": int(maxAuthorizationGrantLifetime),
-                "enforceSingleAccessTokenPerGrant": enforceSingleAccessTokenPerGrant,
-                "enableMultipleRefreshTokensForFaultTolerance": enableMultipleRefreshTokensForFaultTolerance,
-                "pinPolicyEnabled": pinPolicyEnabled,
-                "pinLength": int(pinLength),
-                "tokenCharSet": tokenCharSet
-            }
-            if accessPolicyName is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+        json_data = {
+            "name": name,
+            "description": description,
+            "grantTypes": grantTypes,
+            "tcmBehavior": tcmBehavior,
+            "accessTokenLifetime": int(accessTokenLifetime),
+            "accessTokenLength": int(accessTokenLength),
+            "enforceSingleUseAuthorizationGrant": enforceSingleUseAuthorizationGrant,
+            "authorizationCodeLifetime": int(authorizationCodeLifetime),
+            "authorizationCodeLength": int(authorizationCodeLength),
+            "issueRefreshToken": issueRefreshToken,
+            "refreshTokenLength": int(refreshTokenLength),
+            "maxAuthorizationGrantLifetime": int(maxAuthorizationGrantLifetime),
+            "enforceSingleAccessTokenPerGrant": enforceSingleAccessTokenPerGrant,
+            "enableMultipleRefreshTokensForFaultTolerance": enableMultipleRefreshTokensForFaultTolerance,
+            "pinPolicyEnabled": pinPolicyEnabled,
+            "pinLength": int(pinLength),
+            "tokenCharSet": tokenCharSet
+        }
+        if accessPolicyName is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, access policy: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring access policy for this call.".format(
+                        isamAppliance.facts["version"], oidc))
+                accessPolicyName = None
+            else:
+                ap_ret_obj = access_policy.search(isamAppliance, accessPolicyName, check_mode=check_mode, force=force)
+                if ap_ret_obj['data'] == {}:
+                    warnings = ap_ret_obj["warnings"]
                     warnings.append(
-                        "Appliance at version: {0}, access policy: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring access policy for this call.".format(
-                            isamAppliance.facts["version"], oidc))
-                    accessPolicyName = None
+                        "Access Policy {0} is not found. Cannot add definition.".format(accessPolicyName))
+                    return isamAppliance.create_return_object(warnings=warnings)
                 else:
-                    ap_ret_obj = access_policy.search(isamAppliance, accessPolicyName, check_mode=check_mode, force=force)
-                    if ap_ret_obj['data'] == {}:
-                        warnings = ap_ret_obj["warnings"]
-                        warnings.append(
-                            "Access Policy {0} is not found. Cannot add definition.".format(accessPolicyName))
-                        return isamAppliance.create_return_object(warnings=warnings)
-                    else:
-                        json_data["accessPolicyId"] = int(ap_ret_obj['data'])
+                    json_data["accessPolicyId"] = int(ap_ret_obj['data'])
 
-            if oidc is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, oidc: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring oidc for this call.".format(
-                            isamAppliance.facts["version"], oidc))
-                else:
-                    if 'attributeSources' in oidc:
-                        oidc['attributeSources'] = _map_oidc_attributeSources(isamAppliance, oidc['attributeSources'], check_mode, force)
-                    json_data["oidc"] = oidc
-                if 'dynamicClients' in json_data['oidc']:
-                    if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") < 0:
-                        warnings.append(
-                            "Appliance at version: {0}, dynamicClients: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring dynamicClients for this call.".format(
-                                isamAppliance.facts["version"], json_data['oidc']['dynamicClients']))
-                        del json_data['oidc']['dynamicClients']
-                if 'issueSecret' in json_data['oidc']:
-                    if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") < 0:
-                        warnings.append(
-                            "Appliance at version: {0}, issueSecret: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring issueSecret for this call.".format(
-                                isamAppliance.facts["version"], json_data['oidc']['issueSecret']))
-                        del json_data['oidc']['issueSecret']
+        if oidc is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, oidc: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring oidc for this call.".format(
+                        isamAppliance.facts["version"], oidc))
+            else:
+                if 'attributeSources' in oidc:
+                    oidc['attributeSources'] = _map_oidc_attributeSources(isamAppliance, oidc['attributeSources'], check_mode, force)
+                json_data["oidc"] = oidc
+            if (
+                'dynamicClients' in json_data['oidc']
+                and tools.version_compare(
+                    isamAppliance.facts["version"], "9.0.5.0"
+                )
+                < 0
+            ):
+                warnings.append(
+                    "Appliance at version: {0}, dynamicClients: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring dynamicClients for this call.".format(
+                        isamAppliance.facts["version"], json_data['oidc']['dynamicClients']))
+                del json_data['oidc']['dynamicClients']
+            if (
+                'issueSecret' in json_data['oidc']
+                and tools.version_compare(
+                    isamAppliance.facts["version"], "9.0.5.0"
+                )
+                < 0
+            ):
+                warnings.append(
+                    "Appliance at version: {0}, issueSecret: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring issueSecret for this call.".format(
+                        isamAppliance.facts["version"], json_data['oidc']['issueSecret']))
+                del json_data['oidc']['issueSecret']
 
-            return isamAppliance.invoke_post(
-                "Create an API protection definition", uri,
-                json_data, requires_modules=requires_modules, requires_version=requires_version, warnings=warnings)
+        return isamAppliance.invoke_post(
+            "Create an API protection definition", uri,
+            json_data, requires_modules=requires_modules, requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -161,14 +169,13 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if defn_id == {}:
         logger.info("Definition {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete an API protection definition",
-                "{0}/{1}".format(uri, defn_id), requires_modules=requires_modules,
-                requires_version=requires_version, warnings=warnings)
+        return isamAppliance.invoke_delete(
+            "Delete an API protection definition",
+            "{0}/{1}".format(uri, defn_id), requires_modules=requires_modules,
+            requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -291,11 +298,15 @@ def update(isamAppliance, name, description="", accessPolicyName=None, grantType
                         "Appliance at version: {0}, dynamicClients: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring dynamicClients for this call.".format(
                             isamAppliance.facts["version"], json_data['oidc']['dynamicClients']))
                     del json_data['oidc']['dynamicClients']
-            else:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") >= 0:
-                    if 'dynamicClients' in ret_obj['data']['oidc'] and ret_obj['data']['oidc'][
-                        'dynamicClients'] is False:
-                        del ret_obj['data']['oidc']['dynamicClients']
+            elif (
+                tools.version_compare(
+                    isamAppliance.facts["version"], "9.0.5.0"
+                )
+                >= 0
+                and 'dynamicClients' in ret_obj['data']['oidc']
+                and ret_obj['data']['oidc']['dynamicClients'] is False
+            ):
+                del ret_obj['data']['oidc']['dynamicClients']
 
             if 'issueSecret' in json_data['oidc']:
                 if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") < 0:
@@ -303,10 +314,15 @@ def update(isamAppliance, name, description="", accessPolicyName=None, grantType
                         "Appliance at version: {0}, issueSecret: {1} is not supported. Needs 9.0.5.0 or higher. Ignoring issueSecret for this call.".format(
                             isamAppliance.facts["version"], json_data['oidc']['issueSecret']))
                     del json_data['oidc']['issueSecret']
-            else:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.5.0") >= 0:
-                    if 'issueSecret' in ret_obj['data']['oidc'] and ret_obj['data']['oidc']['issueSecret'] is False:
-                        del ret_obj['data']['oidc']['issueSecret']
+            elif (
+                tools.version_compare(
+                    isamAppliance.facts["version"], "9.0.5.0"
+                )
+                >= 0
+                and 'issueSecret' in ret_obj['data']['oidc']
+                and ret_obj['data']['oidc']['issueSecret'] is False
+            ):
+                del ret_obj['data']['oidc']['issueSecret']
 
             if 'fapiCompliant' in ret_obj['data']['oidc'] and 'fapiCompliant' not in json_data['oidc']:
                 del ret_obj['data']['oidc']['fapiCompliant']
@@ -323,7 +339,7 @@ def update(isamAppliance, name, description="", accessPolicyName=None, grantType
         if sorted_ret_obj != sorted_json_data:
             needs_update = True
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:

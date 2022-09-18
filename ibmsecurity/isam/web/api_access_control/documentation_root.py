@@ -47,24 +47,23 @@ def add(isamAppliance, instance_name, type, file_name=None, dir_name=None, conte
     if force is True or exist is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "type": type
-            }
-            if file_name != None:
-                json_data['file_name'] = file_name
+        json_data = {
+            "type": type
+        }
+        if file_name != None:
+            json_data['file_name'] = file_name
 
-            if dir_name != None:
-                json_data['dir_name'] = dir_name
+        if dir_name != None:
+            json_data['dir_name'] = dir_name
 
-            if contents != None:
-                json_data['contents'] = contents
+        if contents != None:
+            json_data['contents'] = contents
 
-            return isamAppliance.invoke_post(
-                "Creating a file or directory in the API Access Control documentation ",
-                "{0}/{1}/documentation".format(uri, instance_name),
-                json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_post(
+            "Creating a file or directory in the API Access Control documentation ",
+            "{0}/{1}/documentation".format(uri, instance_name),
+            json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -78,17 +77,16 @@ def update(isamAppliance, instance_name, file_name, contents, type='file', check
     if force is True or same_contents is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "type": type,
-                "contents": contents
-            }
+        json_data = {
+            "type": type,
+            "contents": contents
+        }
 
-            return isamAppliance.invoke_put(
-                "Updating a file in the API Access Control documentation root  ",
-                "{0}/{1}/documentation/{2}".format(uri, instance_name, file_name),
-                json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_put(
+            "Updating a file in the API Access Control documentation root  ",
+            "{0}/{1}/documentation/{2}".format(uri, instance_name, file_name),
+            json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -115,17 +113,16 @@ def rename_directory(isamAppliance, instance_name, file_name, new_name, type='di
     if force is True or exists is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "type": type,
-                "new_name": new_name
-            }
+        json_data = {
+            "type": type,
+            "new_name": new_name
+        }
 
-            return isamAppliance.invoke_put(
-                "Renaming a directory in the API Access Control documentation root",
-                "{0}/{1}/documentation/{2}".format(uri, instance_name, file_name),
-                json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_put(
+            "Renaming a directory in the API Access Control documentation root",
+            "{0}/{1}/documentation/{2}".format(uri, instance_name, file_name),
+            json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -139,17 +136,16 @@ def rename_file(isamAppliance, instance_name, file_name, new_name, type='file', 
     if force is True or exists is True:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "type": type,
-                "new_name": new_name
-            }
+        json_data = {
+            "type": type,
+            "new_name": new_name
+        }
 
-            return isamAppliance.invoke_put(
-                "Renaming a file in the API Access Control documentation root",
-                "{0}/{1}/documentation/{2}".format(uri, instance_name, file_name),
-                json_data,
-                requires_modules=requires_modules, requires_version=requires_version)
+        return isamAppliance.invoke_put(
+            "Renaming a file in the API Access Control documentation root",
+            "{0}/{1}/documentation/{2}".format(uri, instance_name, file_name),
+            json_data,
+            requires_modules=requires_modules, requires_version=requires_version)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -234,11 +230,14 @@ def import_file(isamAppliance, instance_name, file_path, file_name="", check_mod
 def _check_instance_exist(isamAppliance, instance_name):
     ret_obj = ibmsecurity.isam.web.api_access_control.resources.get_all_instances(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['name'] == instance_name:
-            return True, ret_obj['warnings']
-
-    return False, ret_obj['warnings']
+    return next(
+        (
+            (True, ret_obj['warnings'])
+            for obj in ret_obj['data']
+            if obj['name'] == instance_name
+        ),
+        (False, ret_obj['warnings']),
+    )
 
 
 def _check_exist(isamAppliance, instance_name, file_name):
@@ -258,21 +257,17 @@ def _check_contents(isamAppliance, instance_name, file_name, contents=None, file
     try:
         ret_obj = get(isamAppliance, instance_name, file_name)
 
-        if contents != None:
-            if ret_obj['data']['contents'] == contents:
-                return True, ret_obj['warnings']
-            else:
-                return False, ret_obj['warnings']
-        elif file != None:
+        if contents != None and ret_obj['data']['contents'] == contents:
+            return True, ret_obj['warnings']
+        elif contents != None or file is None:
+            return False, ret_obj['warnings']
+        else:
             with open(file, 'rt') as myfile:
                 new_contents = myfile.read()
             if ret_obj['data']['contents'] == new_contents:
                 return True, ret_obj['warnings']
             else:
                 return False, ret_obj['warnings']
-        else:
-            return False, ret_obj['warnings']
-
     except Exception as e:
         warnings = ["Exception occurred: {0}.".format(e)]
         return True, warnings

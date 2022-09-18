@@ -27,16 +27,15 @@ def disable(isamAppliance, check_mode=False, force=False):
 
     check_value, warnings = _check_enable(isamAppliance)
 
-    if force is True or check_value is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete("Disabling HA", module_uri,
-                                               requires_version=requires_version,
-                                               requires_modules=requires_modules,
-                                               requires_model=requires_model)
-    else:
+    if force is not True and check_value is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_delete("Disabling HA", module_uri,
+                                           requires_version=requires_version,
+                                           requires_modules=requires_modules,
+                                           requires_model=requires_model)
 
 
 def enable(isamAppliance, is_primary, interface, remote, port, health_check_interval,
@@ -56,17 +55,16 @@ def enable(isamAppliance, is_primary, interface, remote, port, health_check_inte
 
     check_value, warnings = _check_enable(isamAppliance)
 
-    if force is True or check_value is False:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_post("Enabling HA", module_uri,
-                                             json_data,
-                                             requires_version=requires_version,
-                                             requires_modules=requires_modules,
-                                             requires_model=requires_model)
-    else:
+    if force is not True and check_value is not False:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_post("Enabling HA", module_uri,
+                                         json_data,
+                                         requires_version=requires_version,
+                                         requires_modules=requires_modules,
+                                         requires_model=requires_model)
 
 
 def update(isamAppliance, is_primary, interface, remote, port, health_check_interval,
@@ -87,17 +85,16 @@ def update(isamAppliance, is_primary, interface, remote, port, health_check_inte
     # Call to check function to see if configuration already exist
     update_required, warnings = _check_update(isamAppliance, json_data)
 
-    if force is True or update_required is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnigns=warnings)
-        else:
-            return isamAppliance.invoke_put("Updating HA configuration", module_uri,
-                                            json_data,
-                                            requires_modules=requires_modules,
-                                            requires_version=requires_version,
-                                            requires_model=requires_model)
-    else:
+    if force is not True and update_required is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnigns=warnings)
+    else:
+        return isamAppliance.invoke_put("Updating HA configuration", module_uri,
+                                        json_data,
+                                        requires_modules=requires_modules,
+                                        requires_version=requires_version,
+                                        requires_model=requires_model)
 
 
 def set(isamAppliance, is_primary, interface, remote, port, health_check_interval,
@@ -152,13 +149,12 @@ def _check_enable(isamAppliance):
     check_obj = get(isamAppliance)
     warnings = check_obj['warnings']
 
-    if 'enabled' in check_obj['data']:
-        if check_obj['data']['enabled'] == True:
-            return True, warnings
-        else:
-            return False, warnings
-    else:
+    if 'enabled' not in check_obj['data']:
         return None, warnings
+    if check_obj['data']['enabled'] == True:
+        return True, warnings
+    else:
+        return False, warnings
 
 
 def compare(isamAppliance1, isamAppliance2):

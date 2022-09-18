@@ -49,11 +49,13 @@ def _changes_available(isamAppliance):
     logger.debug(change_count['data'])
     logger.debug(change_count)
 
-    if change_count['data']['count'] > 0 or len(changes['data']['changes']) > 0:
-        logger.info("pending changes found")
-        return True
-    else:
+    if (
+        change_count['data']['count'] <= 0
+        and len(changes['data']['changes']) <= 0
+    ):
         return False
+    logger.info("pending changes found")
+    return True
 
 
 def commit(isamAppliance, check_mode=False, force=False):
@@ -102,37 +104,36 @@ def reboot_and_wait(isamAppliance, wait_time=300, check_freq=5, check_mode=False
     warnings = []
     if check_mode is True:
         return isamAppliance.create_return_object(changed=True)
-    else:
-        firmware = ibmsecurity.isam.base.firmware.get(isamAppliance, check_mode=check_mode, force=force)
+    firmware = ibmsecurity.isam.base.firmware.get(isamAppliance, check_mode=check_mode, force=force)
 
-        ret_obj = reboot(isamAppliance)
+    ret_obj = reboot(isamAppliance)
 
-        if ret_obj['rc'] == 0:
-            sec = 0
+    if ret_obj['rc'] == 0:
+        sec = 0
 
-            # Now check if it is up and running
-            while 1:
-                ret_obj = ibmsecurity.isam.base.firmware.get(isamAppliance, check_mode=check_mode, force=force,
-                                                             ignore_error=True)
+        # Now check if it is up and running
+        while 1:
+            ret_obj = ibmsecurity.isam.base.firmware.get(isamAppliance, check_mode=check_mode, force=force,
+                                                         ignore_error=True)
 
-                # check partition last_boot time
-                if ret_obj['rc'] == 0 and isinstance(ret_obj['data'], list) and len(ret_obj['data']) > 0 and \
-                        (('last_boot' in ret_obj['data'][0] and ret_obj['data'][0]['last_boot'] != firmware['data'][0][
-                            'last_boot'] and ret_obj['data'][0]['active'] == True) or (
-                                 'last_boot' in ret_obj['data'][1] and ret_obj['data'][1]['last_boot'] !=
-                                 firmware['data'][1]['last_boot'] and ret_obj['data'][1]['active'] == True)):
-                    logger.info("Server is responding and has a different boot time!")
-                    return isamAppliance.create_return_object(warnings=warnings)
-                else:
-                    time.sleep(check_freq)
-                    sec += check_freq
-                    logger.debug(
-                        "Server is not responding yet. Waited for {0} secs, next check in {1} secs.".format(sec,
-                                                                                                            check_freq))
+            # check partition last_boot time
+            if ret_obj['rc'] == 0 and isinstance(ret_obj['data'], list) and len(ret_obj['data']) > 0 and \
+                    (('last_boot' in ret_obj['data'][0] and ret_obj['data'][0]['last_boot'] != firmware['data'][0][
+                        'last_boot'] and ret_obj['data'][0]['active'] == True) or (
+                             'last_boot' in ret_obj['data'][1] and ret_obj['data'][1]['last_boot'] !=
+                             firmware['data'][1]['last_boot'] and ret_obj['data'][1]['active'] == True)):
+                logger.info("Server is responding and has a different boot time!")
+                return isamAppliance.create_return_object(warnings=warnings)
+            else:
+                time.sleep(check_freq)
+                sec += check_freq
+                logger.debug(
+                    "Server is not responding yet. Waited for {0} secs, next check in {1} secs.".format(sec,
+                                                                                                        check_freq))
 
-                if sec >= wait_time:
-                    warnings.append("Server reboot not detected or completed, exiting... after {0} seconds".format(sec))
-                    break
+            if sec >= wait_time:
+                warnings.append("Server reboot not detected or completed, exiting... after {0} seconds".format(sec))
+                break
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -150,34 +151,33 @@ def commit_and_restart_and_wait(isamAppliance, wait_time=300, check_freq=5, chec
     warnings = []
     if check_mode is True:
         return isamAppliance.create_return_object(changed=True)
-    else:
-        lmi = ibmsecurity.isam.base.lmi.get(isamAppliance, check_mode=check_mode, force=force)
+    lmi = ibmsecurity.isam.base.lmi.get(isamAppliance, check_mode=check_mode, force=force)
 
-        ret_obj = commit_and_restart(isamAppliance)
+    ret_obj = commit_and_restart(isamAppliance)
 
-        if ret_obj['rc'] == 0:
-            sec = 0
+    if ret_obj['rc'] == 0:
+        sec = 0
 
-            # Now check if it is up and running
-            while 1:
-                ret_obj = ibmsecurity.isam.base.lmi.get(isamAppliance, check_mode=check_mode, force=force)
+        # Now check if it is up and running
+        while 1:
+            ret_obj = ibmsecurity.isam.base.lmi.get(isamAppliance, check_mode=check_mode, force=force)
 
-                # check partition last_boot time
-                if ret_obj['rc'] == 0 and isinstance(ret_obj['data'], list) and len(ret_obj['data']) > 0 and \
-                        ('start_time' in ret_obj['data'][0] and ret_obj['data'][0]['start_time'] != lmi['data'][0][
-                            'start_time']):
-                    logger.info("LMI is responding and has a different start time!")
-                    return isamAppliance.create_return_object(warnings=warnings)
-                else:
-                    time.sleep(check_freq)
-                    sec += check_freq
-                    logger.debug("LMI is not responding yet. Waited for {0} secs, next check in {1} secs.".format(sec,
-                                                                                                                  check_freq))
+            # check partition last_boot time
+            if ret_obj['rc'] == 0 and isinstance(ret_obj['data'], list) and len(ret_obj['data']) > 0 and \
+                    ('start_time' in ret_obj['data'][0] and ret_obj['data'][0]['start_time'] != lmi['data'][0][
+                        'start_time']):
+                logger.info("LMI is responding and has a different start time!")
+                return isamAppliance.create_return_object(warnings=warnings)
+            else:
+                time.sleep(check_freq)
+                sec += check_freq
+                logger.debug("LMI is not responding yet. Waited for {0} secs, next check in {1} secs.".format(sec,
+                                                                                                              check_freq))
 
-                if sec >= wait_time:
-                    warnings.append(
-                        "The LMI restart not detected or completed, exiting... after {0} seconds".format(sec))
-                    break
+            if sec >= wait_time:
+                warnings.append(
+                    "The LMI restart not detected or completed, exiting... after {0} seconds".format(sec))
+                break
 
     return isamAppliance.create_return_object(warnings=warnings)
 

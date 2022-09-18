@@ -113,14 +113,15 @@ def export_file(isamAppliance, id, filename, check_mode=False, force=False):
     """
     Exporting a Rate Limiting policy
     """
-    if force is True or _check(isamAppliance, id) is True:
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export a Rate Limiting policy",
-                "/wga/ratelimiting/{0}?export".format(id),
-                filename,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+    if (
+        force is True or _check(isamAppliance, id) is True
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export a Rate Limiting policy",
+            "/wga/ratelimiting/{0}?export".format(id),
+            filename,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -156,11 +157,7 @@ def _check(isamAppliance, id):
     """
     ret_obj = get_all(isamAppliance)
 
-    for obj in ret_obj['data']:
-        if obj['id'] == id:
-            return True
-
-    return False
+    return any(obj['id'] == id for obj in ret_obj['data'])
 
 
 def _check_import(isamAppliance, id, filename, check_mode=False):

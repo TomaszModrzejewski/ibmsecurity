@@ -43,11 +43,15 @@ def get_state(isamAppliance, cluster_id, check_mode=False, force=False):
     """
     Validate a cluster identifier
     """
-    if not cluster_id:
-        return isamAppliance.create_return_object()
-    return isamAppliance.invoke_get("Validate a cluster identifier",
-                                    "/isam/cluster/id/address/{0}/state/v2".format(cluster_id),
-                                    requires_model=requires_model)
+    return (
+        isamAppliance.invoke_get(
+            "Validate a cluster identifier",
+            "/isam/cluster/id/address/{0}/state/v2".format(cluster_id),
+            requires_model=requires_model,
+        )
+        if cluster_id
+        else isamAppliance.create_return_object()
+    )
 
 
 def get_master(isamAppliance, check_mode=False, force=False):
@@ -134,10 +138,8 @@ def add(isamAppliance, signature_file, restricted=False, check_mode=False, force
 
 
 def _check(isamAppliance, id):
-    obj = {'value': False, 'warnings': ""}
-
     ret_obj = get_all(isamAppliance)
-    obj['warnings'] = ret_obj['warnings']
+    obj = {'value': False, 'warnings': ret_obj['warnings']}
     for node in ret_obj['data']:
         if node['address'] == id:
             obj['value'] = True

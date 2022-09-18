@@ -26,7 +26,10 @@ def migrate(isamAppliance, batchSize, batchCount, check_mode=False, force=False)
         "batchCount": batchCount
     }
 
-    ret_obj = isamAppliance.invoke_post("Migrate U2F Registrations", uri, json_data,
-                                    requires_modules=requires_modules, requires_version=requires_version)
-
-    return ret_obj
+    return isamAppliance.invoke_post(
+        "Migrate U2F Registrations",
+        uri,
+        json_data,
+        requires_modules=requires_modules,
+        requires_version=requires_version,
+    )

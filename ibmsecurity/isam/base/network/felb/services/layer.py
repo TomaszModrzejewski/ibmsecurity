@@ -34,15 +34,14 @@ def update(isamAppliance, service_name, type, layer7_secure, layer7_ssl_label, l
 
     change_required, warnings = _check(isamAppliance, service_name, json_data)
 
-    if force is True or change_required is True:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_put("Updating Service Layer", "{0}/{1}/layer".format(module_uri, service_name),
-                                            json_data, requires_version=requires_version,
-                                            requires_modules=requires_modules, requires_model=requires_model)
-    else:
+    if force is not True and change_required is not True:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_put("Updating Service Layer", "{0}/{1}/layer".format(module_uri, service_name),
+                                        json_data, requires_version=requires_version,
+                                        requires_modules=requires_modules, requires_model=requires_model)
 
 
 def _check(isamAppliance, service_name, json_data):

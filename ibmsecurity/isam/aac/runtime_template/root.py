@@ -20,13 +20,14 @@ def export_file(isamAppliance, filename, check_mode=False, force=False):
     """
     import os.path
 
-    if force is True or os.path.exists(filename) is False:
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Export all Runtime Template Files",
-                "{0}/?export=true".format(uri),
-                filename, no_headers=True, requires_modules=requires_modules,
-                requires_version=requires_version)
+    if (
+        force is True or os.path.exists(filename) is False
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Export all Runtime Template Files",
+            "{0}/?export=true".format(uri),
+            filename, no_headers=True, requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -51,25 +52,24 @@ def import_file(isamAppliance, filename, delete_missing=False, check_mode=False,
             zServerFile = zipfile.ZipFile(tempfile)
             zClientFile = zipfile.ZipFile(filename)
 
-            files_on_server = [];
-            for info in zServerFile.infolist():
-                files_on_server.append(info.filename)
-            files_on_client = [];
-            for info in zClientFile.infolist():
-                files_on_client.append(info.filename)
+            files_on_server = [info.filename for info in zServerFile.infolist()];
+            files_on_client = [info.filename for info in zClientFile.infolist()];
             missing_client_files = [x for x in files_on_server if x not in files_on_client]
-            
-            if missing_client_files != []:
-              logger.info("list all missing files in {}, which will be deleted on the server: {}.".format(filename, missing_client_files))
 
-            for x in missing_client_files:                
+            if missing_client_files != []:
+                logger.info(
+                    f"list all missing files in {filename}, which will be deleted on the server: {missing_client_files}."
+                )
+
+
+            for x in missing_client_files:    
                 if x.endswith('/'):
-                    search_dir= os.path.dirname(x[:-1]) + '/'
+                    search_dir = f'{os.path.dirname(x[:-1])}/'
                     if search_dir not in missing_client_files:
                         logger.debug("delete directory on the server: {0}.".format(x))
                         delete(isamAppliance, x, "directory", check_mode=check_mode)
                 else:
-                    search_dir= os.path.dirname(x) + '/'
+                    search_dir = f'{os.path.dirname(x)}/'
                     if search_dir not in missing_client_files:
                         logger.debug("delete file on the server: {0}.".format(x))
                         delete(isamAppliance, x, "file", check_mode=check_mode)
@@ -107,20 +107,26 @@ def _check_import(isamAppliance, filename):
     tempfilename = "template_files.zip"
     tempfile =  os.path.join(tempdir, tempfilename)
     export_file(isamAppliance, tempfile)
-    
+
     if os.path.exists(tempfile):
-      identical = files_same_zip_content(filename,tempfile)
-    
-      shutil.rmtree(tempdir)
-      if identical:
-          logger.info("runtime template files {} are identical with the server content. No update necessary.".format(filename))
-          return False
-      else:
-          logger.info("runtime template files {} differ from the server content. Updating runtime template files necessary.".format(filename))
-          return True
+        identical = files_same_zip_content(filename,tempfile)
+
+        shutil.rmtree(tempdir)
+        if identical:
+            logger.info(
+                f"runtime template files {filename} are identical with the server content. No update necessary."
+            )
+
+            return False
+        else:
+            logger.info(
+                f"runtime template files {filename} differ from the server content. Updating runtime template files necessary."
+            )
+
+            return True
     else:
-      logger.info("missing zip file from server. Comparison skipped.")
-      return False
+        logger.info("missing zip file from server. Comparison skipped.")
+        return False
 
 def check(isamAppliance, id, type, check_mode=False, force=False):
     ret_obj = None

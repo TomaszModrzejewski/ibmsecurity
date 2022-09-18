@@ -25,14 +25,13 @@ def get(isamAppliance, name, check_mode=False, force=False):
     """
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     config_prop_name = ret_obj['data']
+    if config_prop_name != {}:
+        return _get(isamAppliance, name)
+    logger.info("Kerberos Default config property {0} had no match, skipping retrieval.".format(name))
     warnings = ret_obj["warnings"]
 
-    if config_prop_name == {}:
-        logger.info("Kerberos Default config property {0} had no match, skipping retrieval.".format(name))
-        warnings.append("Kerberos Default config property {0} had no match.".format(name))
-        return isamAppliance.create_return_object(warnings=warnings)
-    else:
-        return _get(isamAppliance, name)
+    warnings.append("Kerberos Default config property {0} had no match.".format(name))
+    return isamAppliance.create_return_object(warnings=warnings)
 
 
 def _get(isamAppliance, config_prop_name, recursive="yes", includeValues="yes"):
@@ -89,14 +88,13 @@ def delete(isamAppliance, name, check_mode=False, force=False):
 
     if config_prop_name == {}:
         logger.info("Default property {0} not found, skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete an Kerberos configuration default property",
-                "{0}/{1}".format(uri, name), requires_modules=requires_modules,
-                requires_version=requires_version, warnings=warnings)
+        return isamAppliance.invoke_delete(
+            "Delete an Kerberos configuration default property",
+            "{0}/{1}".format(uri, name), requires_modules=requires_modules,
+            requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 
@@ -129,7 +127,7 @@ def update(isamAppliance, name, value, check_mode=False,
 
     logger.debug("needs update is: {0}".format(needs_update))
 
-    if force is True or needs_update is True:
+    if force is True or needs_update:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
         else:

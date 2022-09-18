@@ -19,7 +19,7 @@ def set(isamAppliance, name, user_name, type='embedded_ldap', check_mode=False, 
     new_user = True
     ret_obj = ibmsecurity.isam.base.management_authorization.role.get(isamAppliance, name)
 
-    if (ret_obj['data']['users'] == None):
+    if ret_obj['data']['users'] is None:
         ret_obj['data']['users'] = []
     else:
         for usr in ret_obj['data']['users']:

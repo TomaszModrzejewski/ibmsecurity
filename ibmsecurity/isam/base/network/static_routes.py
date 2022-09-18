@@ -59,19 +59,16 @@ def add(isamAppliance, address, enabled=True, comment=None, table='main', maskOr
         logger.debug("Interface {0} not found, Add static route is not supported.".format(label))
         return isamAppliance.create_return_object(changed=False)
 
-    if maskOrPrefix is not None:
-        if isinstance(maskOrPrefix, basestring):
-            if maskOrPrefix.lower() == 'none':
-                maskOrPrefix = ''
-    if isinstance(table, basestring):
-        if table.lower() == 'none':
-            table = None
+    if (
+        maskOrPrefix is not None
+        and isinstance(maskOrPrefix, basestring)
+        and maskOrPrefix.lower() == 'none'
+    ):
+        maskOrPrefix = ''
+    if isinstance(table, basestring) and table.lower() == 'none':
+        table = None
     if isinstance(metric, basestring):
-        if metric.lower() == 'none':
-            metric = None
-        else:
-            metric = int(metric)
-
+        metric = None if metric.lower() == 'none' else int(metric)
     if force is True or _check(isamAppliance=isamAppliance, address=address, table=table,
                                interfaceUUID=interfaceUUID) is False:
         if check_mode is True:
@@ -140,22 +137,17 @@ def update(isamAppliance, address, new_address=None, enabled=True, maskOrPrefix=
         interfaceUUID = ''
     if new_address is not None:
         address = new_address
-    if maskOrPrefix is not None:
-        if isinstance(maskOrPrefix, basestring):
-            if maskOrPrefix.lower() == 'none':
-                maskOrPrefix = ''
+    if (
+        maskOrPrefix is not None
+        and isinstance(maskOrPrefix, basestring)
+        and maskOrPrefix.lower() == 'none'
+    ):
+        maskOrPrefix = ''
 
     if isinstance(metric, basestring):
-        if metric.lower() == 'none':
-            metric = None
-        else:
-            metric = int(metric)
+        metric = None if metric.lower() == 'none' else int(metric)
     if isinstance(enabled, basestring):
-        if enabled.lower() == 'true':
-            enabled = True
-        else:
-            enabled = False
-
+        enabled = enabled.lower() == 'true'
     json_data = {
         "enabled": enabled,
         "address": address,
@@ -213,15 +205,9 @@ def set(isamAppliance, address, new_address=None, enabled=True, maskOrPrefix=Non
 
 def _get_interfaceUUID(isamAppliance, label, vlanId=None):
     if label is None or label == '' or label.lower() == 'auto':
-        interfaceUUID = ''
-    else:
-        intf, warnings= ibmsecurity.isam.base.network.interfaces._get_interface(isamAppliance, label, vlanId)
-        if intf:
-            interfaceUUID = intf['uuid']
-        else:
-            interfaceUUID = ''
-
-    return interfaceUUID
+        return ''
+    intf, warnings= ibmsecurity.isam.base.network.interfaces._get_interface(isamAppliance, label, vlanId)
+    return intf['uuid'] if intf else ''
 
 
 def _get_uuid(isamAppliance, address, table, interfaceUUID):
@@ -287,11 +273,12 @@ def _check(isamAppliance, address, table, interfaceUUID):
     """
     ret_obj = get_all(isamAppliance)
 
-    for sr in ret_obj['data']['staticRoutes']:
-        if sr['address'] == address and sr['table'] == table and sr['interfaceUUID'] == interfaceUUID:
-            return True
-
-    return False
+    return any(
+        sr['address'] == address
+        and sr['table'] == table
+        and sr['interfaceUUID'] == interfaceUUID
+        for sr in ret_obj['data']['staticRoutes']
+    )
 
 
 def _compare(isamAppliance, json_data):

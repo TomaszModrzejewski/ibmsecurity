@@ -79,10 +79,11 @@ def combine(isamAppliance, newname, keytab_files, check_mode=False, force=False)
     keytab_files should be an array of keytabs, like so:
         ['a.keytab', 'b.keytab']
     """
-    warnings = []
-    for keytab in keytab_files:
-        if _check(isamAppliance, keytab) is False:
-            warnings.append("keytab file to be combined: {0}, not found".format(keytab))
+    warnings = [
+        "keytab file to be combined: {0}, not found".format(keytab)
+        for keytab in keytab_files
+        if _check(isamAppliance, keytab) is False
+    ]
 
     if force is True or _check(isamAppliance, newname) is False:
         if check_mode is True:

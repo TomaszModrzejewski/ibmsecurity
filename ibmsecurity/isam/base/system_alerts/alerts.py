@@ -51,11 +51,7 @@ def _check(isamAppliance, uuid):
     Check if the system alert exists or not
     """
     ret_obj = get(isamAppliance)
-    for obj in ret_obj['data']['responses']:
-        if obj['uuid'] == uuid:
-            return True
-
-    return False
+    return any(obj['uuid'] == uuid for obj in ret_obj['data']['responses'])
 
 
 def compare(isamAppliance1, isamAppliance2):

@@ -24,11 +24,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     id = ret_obj['data']
 
-    if id == {}:
-        logger.info("Attribute Source {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if id != {}:
         return _get(isamAppliance, id)
+    logger.info("Attribute Source {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def _get(isamAppliance, id):
@@ -39,10 +38,12 @@ def _get(isamAppliance, id):
     :param id:
     :return:
     """
-    return isamAppliance.invoke_get("Retrieve a specific attribute source",
-                                    "{}/{}".format(uri, id),
-                                    requires_modules=requires_modules,
-                                    requires_version=requires_version)
+    return isamAppliance.invoke_get(
+        "Retrieve a specific attribute source",
+        f"{uri}/{id}",
+        requires_modules=requires_modules,
+        requires_version=requires_version,
+    )
 
 
 def search(isamAppliance, name, force=False, check_mode=False):
@@ -86,19 +87,18 @@ def add(isamAppliance, name, type, value, properties=None, check_mode=False, for
     if force is True or as_id == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {
-                "name": name,
-                "type": type,
-                "value": value
-            }
-            if properties is not None:
-                json_data['properties'] = properties
-            return isamAppliance.invoke_post(
-                "Create an attribute source",
-                uri, json_data,
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        json_data = {
+            "name": name,
+            "type": type,
+            "value": value
+        }
+        if properties is not None:
+            json_data['properties'] = properties
+        return isamAppliance.invoke_post(
+            "Create an attribute source",
+            uri, json_data,
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -137,10 +137,7 @@ def _check(isamAppliance, name, type, value, properties, new_name=None):
         return None, update_required, json_data
     else:
         as_id = ret_obj['data']['id']
-        if new_name is not None:
-            json_data['name'] = new_name
-        else:
-            json_data['name'] = name
+        json_data['name'] = new_name if new_name is not None else name
         if properties is not None:
             json_data['properties'] = properties
         else:
@@ -170,15 +167,14 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     as_id = ret_obj['data']
     if as_id == {}:
         logger.info("Attribute Source: {0}, no longer exists. Skipping delete.".format(name))
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
     else:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete(
-                "Delete an attribute source",
-                "{0}/{1}".format(uri, as_id),
-                requires_modules=requires_modules,
-                requires_version=requires_version)
+        return isamAppliance.invoke_delete(
+            "Delete an attribute source",
+            "{0}/{1}".format(uri, as_id),
+            requires_modules=requires_modules,
+            requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 

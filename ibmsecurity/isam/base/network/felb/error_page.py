@@ -40,17 +40,16 @@ def set(isamAppliance, error_page, contents, check_mode=False, force=False):
     else:
         ret_contents = False
 
-    if force is True or ret_contents != contents:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            return isamAppliance.invoke_put("Updating an error page", "{0}{1}".format(module_uri, error_page),
-                                            {
-                                                "contents": contents
-                                            }, requires_version=requires_version, requires_modules=requires_modules,
-                                            requires_model=requires_model)
-    else:
+    if force is not True and ret_contents == contents:
         return isamAppliance.create_return_object(warnings=warnings)
+    if check_mode is True:
+        return isamAppliance.create_return_object(changed=True, warnings=warnings)
+    else:
+        return isamAppliance.invoke_put("Updating an error page", "{0}{1}".format(module_uri, error_page),
+                                        {
+                                            "contents": contents
+                                        }, requires_version=requires_version, requires_modules=requires_modules,
+                                        requires_model=requires_model)
 
 
 def import_file(isamAppliance, error_page, filename, check_mode=False, force=False):
@@ -84,13 +83,14 @@ def export_file(isamAppliance, error_page, filename, check_mode=False, force=Fal
     """
 
     import os.path
-    if force is True or os.path.exists(error_page) is False:
-        if check_mode is False:  # No point downloading a file if in check_mode
-            return isamAppliance.invoke_get_file(
-                "Downloading an error page",
-                "{0}{1}?export=true".format(module_uri, error_page),
-                filename=filename, requires_model=requires_model
-            )
+    if (
+        force is True or os.path.exists(error_page) is False
+    ) and check_mode is False:
+        return isamAppliance.invoke_get_file(
+            "Downloading an error page",
+            "{0}{1}?export=true".format(module_uri, error_page),
+            filename=filename, requires_model=requires_model
+        )
 
     return isamAppliance.create_return_object()
 
@@ -99,24 +99,16 @@ def _check(isamAppliance, error_page, filename):
     ret_obj = get(isamAppliance, error_page)
     value = True
     warnings = ret_obj['warnings']
-    ret_contents = ""
-
-    if ret_obj['data'] != {}:
-        ret_contents = ret_obj['data']['contents']
-
+    ret_contents = ret_obj['data']['contents'] if ret_obj['data'] != {} else ""
     with open(filename, 'r') as infile:
         contents = infile.read()
 
     if len(ret_contents) > 0 and len(contents) > 0:
-        if ret_contents.strip() == contents.strip():
-            value = False
-            return value, warnings
-        else:
-            value = True
-            return value, warnings
+        value = ret_contents.strip() != contents.strip()
     else:
         value = True
-        return value, warnings
+
+    return value, warnings
 
 
 def compare(isamAppliance1, isamAppliance2):

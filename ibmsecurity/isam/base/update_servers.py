@@ -24,11 +24,10 @@ def get(isamAppliance, name, check_mode=False, force=False):
     ret_obj = search(isamAppliance, name=name, check_mode=check_mode, force=force)
     us_id = ret_obj['data']
 
-    if us_id == {}:
-        logger.info("Update Server {0} had no match, skipping retrieval.".format(name))
-        return isamAppliance.create_return_object()
-    else:
+    if us_id != {}:
         return _get(isamAppliance, us_id)
+    logger.info("Update Server {0} had no match, skipping retrieval.".format(name))
+    return isamAppliance.create_return_object()
 
 
 def _get(isamAppliance, us_id):
@@ -78,24 +77,23 @@ def add(isamAppliance, priority, name, enabled, hostName, port, trustLevel, useP
     if force is True or search(isamAppliance, name=name) == {}:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True)
-        else:
-            json_data = {"priority": priority,
-                         "name": name,
-                         "enabled": enabled,
-                         "hostName": hostName,
-                         "port": port,
-                         "trustLevel": trustLevel,
-                         "useProxy": useProxy,
-                         "useProxyAuth": useProxyAuth,
-                         "_isNew": True,
-                         "cert": cert,
-                         "proxyHost": proxyHost,
-                         "proxyPort": proxyPort,
-                         "proxyUser": proxyUser,
-                         "proxyPwd": proxyPwd}
+        json_data = {"priority": priority,
+                     "name": name,
+                     "enabled": enabled,
+                     "hostName": hostName,
+                     "port": port,
+                     "trustLevel": trustLevel,
+                     "useProxy": useProxy,
+                     "useProxyAuth": useProxyAuth,
+                     "_isNew": True,
+                     "cert": cert,
+                     "proxyHost": proxyHost,
+                     "proxyPort": proxyPort,
+                     "proxyUser": proxyUser,
+                     "proxyPwd": proxyPwd}
 
-            return isamAppliance.invoke_post("Add a Update Server", uri, json_data, requires_modules=requires_modules,
-                                             requires_version=requires_version)
+        return isamAppliance.invoke_post("Add a Update Server", uri, json_data, requires_modules=requires_modules,
+                                         requires_version=requires_version)
 
     return isamAppliance.create_return_object()
 
@@ -143,10 +141,7 @@ def _check(isamAppliance, priority, name, enabled, hostName, port, trustLevel, u
         return None, update_required, json_data
     else:
         us_id = ret_obj['data']['uuid']
-        if new_name is not None:
-            json_data['name'] = new_name
-        else:
-            json_data['name'] = name
+        json_data['name'] = new_name if new_name is not None else name
         del ret_obj['data']['uuid']
         sorted_json_data = ibmsecurity.utilities.tools.json_sort(json_data)
         logger.debug("Sorted input: {0}".format(sorted_json_data))
@@ -188,14 +183,13 @@ def delete(isamAppliance, name, check_mode=False, force=False):
     """
     ret_obj = search(isamAppliance, name=name)
 
-    if ret_obj['data'] != {}:
-        if check_mode is True:
-            return isamAppliance.create_return_object(changed=True)
-        else:
-            return isamAppliance.invoke_delete("Delete an Update Server", "{0}/{1}".format(uri, ret_obj['data']))
-    else:
+    if ret_obj['data'] == {}:
         logger.info("Update Server: {0} not found, delete skipped.".format(name))
 
+    elif check_mode is True:
+        return isamAppliance.create_return_object(changed=True)
+    else:
+        return isamAppliance.invoke_delete("Delete an Update Server", "{0}/{1}".format(uri, ret_obj['data']))
     return isamAppliance.create_return_object()
 
 

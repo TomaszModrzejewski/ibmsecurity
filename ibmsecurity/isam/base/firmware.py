@@ -31,18 +31,17 @@ def swap(isamAppliance, check_mode=False, force=False):
     """
     if check_mode is True:
         return isamAppliance.create_return_object(changed=True)
-    else:
-        ret_obj_old = get(isamAppliance)
+    ret_obj_old = get(isamAppliance)
 
-        ret_obj = isamAppliance.invoke_put("Swapping the active partition",
-                                           "/firmware_settings/kickoff_swap", {}, requires_model=requires_model)
-        # Process previous query after a successful call to swap the partition
-        for partition in ret_obj_old['data']:
-            if partition['active'] is False:  # Get version of inactive partition (active now!)
-                ver = partition['firmware_version'].split(' ')
-                isamAppliance.facts['version'] = ver[-1]
+    ret_obj = isamAppliance.invoke_put("Swapping the active partition",
+                                       "/firmware_settings/kickoff_swap", {}, requires_model=requires_model)
+    # Process previous query after a successful call to swap the partition
+    for partition in ret_obj_old['data']:
+        if partition['active'] is False:  # Get version of inactive partition (active now!)
+            ver = partition['firmware_version'].split(' ')
+            isamAppliance.facts['version'] = ver[-1]
 
-        return ret_obj
+    return ret_obj
 
 
 def set(isamAppliance, id, comment, check_mode=False, force=False):
@@ -66,12 +65,14 @@ def _check_comment(isamAppliance, comment):
     ret_obj = get(isamAppliance)
     warnings = ret_obj['warnings']
 
-    # Loop through firmware partitions looking for active one
-    for partition in ret_obj['data']:
-        if partition['active'] is True:
-            return (partition['comment'] == comment), warnings
-
-    return False, warnings
+    return next(
+        (
+            (partition['comment'] == comment, warnings)
+            for partition in ret_obj['data']
+            if partition['active'] is True
+        ),
+        (False, warnings),
+    )
 
 
 def compare(isamAppliance1, isamAppliance2):

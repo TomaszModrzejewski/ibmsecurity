@@ -99,15 +99,9 @@ def _exists(isamAppliance, uuid):
     :param uuid:
     :return:
     """
-    exists = False
     ret_obj = get_all(isamAppliance)
 
-    for snmp in ret_obj['data']['logdbObjects']:
-        if snmp['uuid'] == uuid:
-            exists = True
-            break
-
-    return exists
+    return any(snmp['uuid'] == uuid for snmp in ret_obj['data']['logdbObjects'])
 
 
 def _check(isamAppliance, uuid, name, comment, aclEventsAllocation, ipsEventsAllocation, sysEventsAllocation):

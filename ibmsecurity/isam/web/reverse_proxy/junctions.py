@@ -73,11 +73,7 @@ def get(isamAppliance, reverseproxy_id, junctionname, check_mode=False, force=Fa
 def _check(isamAppliance, reverseproxy_id, junctionname):
     ret_obj = get_all(isamAppliance, reverseproxy_id)
 
-    for jct in ret_obj['data']:
-        if jct['id'] == junctionname:
-            return True
-
-    return False
+    return any(jct['id'] == junctionname for jct in ret_obj['data'])
 
 
 def add(isamAppliance, reverseproxy_id, junction_point, server_hostname, server_port, junction_type="tcp",
@@ -153,152 +149,148 @@ def add(isamAppliance, reverseproxy_id, junction_point, server_hostname, server_
     :param silent:
     :return:
     """
-    # See if it's a virtual or standard junction
-    isVirtualJunction = True
-    if junction_point[:1] == '/':
-        isVirtualJunction = False
+    isVirtualJunction = junction_point[:1] != '/'
     if force is True or _check(isamAppliance, reverseproxy_id, junction_point) is False:
         if check_mode is True:
             return isamAppliance.create_return_object(changed=True, warnings=warnings)
-        else:
-            # Create a simple json with just the main junction attributes
-            jct_json = {
-                "junction_point": junction_point,
-                "junction_type": junction_type,
-                "server_hostname": server_hostname,
-                "server_port": server_port,
-                "force": force
-            }
-            # Add attributes that have been supplied... otherwise skip them.
-            if junction_hard_limit is not None:
-                jct_json["junction_hard_limit"] = junction_hard_limit
-            if junction_soft_limit is not None:
-                jct_json["junction_soft_limit"] = junction_soft_limit
-            if basic_auth_mode is not None:
-                jct_json["basic_auth_mode"] = basic_auth_mode
-            if tfim_sso is not None:
-                jct_json["tfim_sso"] = tfim_sso
-            if remote_http_header is not None:
-                jct_json["remote_http_header"] = remote_http_header
-            if stateful_junction is not None:
-                jct_json["stateful_junction"] = stateful_junction
-            if not isVirtualJunction and preserve_cookie:
-                jct_json["preserve_cookie"] = preserve_cookie
-            if not isVirtualJunction and cookie_include_path:
-                jct_json["cookie_include_path"] = cookie_include_path
-            if not isVirtualJunction and transparent_path_junction:
-                jct_json["transparent_path_junction"] = transparent_path_junction
-            if mutual_auth is not None:
-                jct_json["mutual_auth"] = mutual_auth
-            if insert_ltpa_cookies is not None:
-                jct_json["insert_ltpa_cookies"] = insert_ltpa_cookies
-            if insert_session_cookies is not None:
-                jct_json["insert_session_cookies"] = insert_session_cookies
-            if request_encoding is not None:
-                jct_json["request_encoding"] = request_encoding
-            if enable_basic_auth is not None:
-                jct_json["enable_basic_auth"] = enable_basic_auth
-            if key_label is not None:
-                jct_json["key_label"] = key_label
-            if gso_resource_group is not None:
-                jct_json["gso_resource_group"] = gso_resource_group
-            if junction_cookie_javascript_block is not None and junction_cookie_javascript_block != '':
-                jct_json["junction_cookie_javascript_block"] = junction_cookie_javascript_block
-            if client_ip_http is not None:
-                jct_json["client_ip_http"] = client_ip_http
-            if version_two_cookies is not None:
-                jct_json["version_two_cookies"] = version_two_cookies
-            if ltpa_keyfile is not None:
-                jct_json["ltpa_keyfile"] = ltpa_keyfile
-            if authz_rules is not None:
-                jct_json["authz_rules"] = authz_rules
-            if fsso_config_file is not None:
-                jct_json["fsso_config_file"] = fsso_config_file
-            if username is not None:
-                jct_json["username"] = username
-            if password is not None:
-                jct_json["password"] = password
-            if server_uuid is not None:
-                jct_json["server_uuid"] = server_uuid
-            if virtual_hostname is not None:
-                jct_json["virtual_hostname"] = virtual_hostname
-            if server_dn is not None:
-                jct_json["server_dn"] = server_dn
-            if local_ip is not None:
-                jct_json["local_ip"] = local_ip
-            if query_contents is not None:
-                jct_json["query_contents"] = query_contents
-            if case_sensitive_url is not None:
-                jct_json["case_sensitive_url"] = case_sensitive_url
-            if windows_style_url is not None:
-                jct_json["windows_style_url"] = windows_style_url
-            if ltpa_keyfile_password is not None:
-                jct_json["ltpa_keyfile_password"] = ltpa_keyfile_password
-            if https_port is not None:
-                jct_json["https_port"] = https_port
-            if http_port is not None:
-                jct_json["http_port"] = http_port
-            if proxy_hostname is not None:
-                jct_json["proxy_hostname"] = proxy_hostname
-            if proxy_port is not None:
-                jct_json["proxy_port"] = proxy_port
-            if isVirtualJunction and sms_environment is not None:
-                jct_json["sms_environment"] = sms_environment
-            if isVirtualJunction and vhost_label is not None:
-                jct_json["vhost_label"] = vhost_label
-            if delegation_support is not None:
-                jct_json["delegation_support"] = delegation_support
-            if scripting_support is not None:
-                jct_json["scripting_support"] = scripting_support
-            if http2_junction is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, http2_junction: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring http2_junction for this call.".format(
-                            isamAppliance.facts["version"], http2_junction))
-                else:
-                    jct_json["http2_junction"] = http2_junction
-            if http2_proxy is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, http2_proxy: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring http2_proxy for this call.".format(
-                            isamAppliance.facts["version"], http2_proxy))
-                else:
-                    jct_json['http2_proxy'] = http2_proxy
-            if sni_name is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, sni_name: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring sni_name for this call.".format(
-                            isamAppliance.facts["version"], sni_name))
-                else:
-                    jct_json['sni_name'] = sni_name
-            if description is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "9.0.7.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, description: {1} is not supported. Needs 9.0.7.0 or higher. Ignoring description for this call.".format(
-                            isamAppliance.facts["version"], description))
-                else:
-                    jct_json['description'] = description
-            if priority is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "10.0.2.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, priority: {1} is not supported. Needs 10.0.2.0 or higher. Ignoring priority for this call.".format(
-                            isamAppliance.facts["version"], priority))
-                else:
-                    jct_json['priority'] = priority
-            if server_cn is not None:
-                if tools.version_compare(isamAppliance.facts["version"], "10.0.2.0") < 0:
-                    warnings.append(
-                        "Appliance at version: {0}, server_cn: {1} is not supported. Needs 10.0.2.0 or higher. Ignoring server_cn for this call.".format(
-                            isamAppliance.facts["version"], server_cn))
-                else:
-                    jct_json['server_cn'] = server_cn
-            if isVirtualJunction and silent:
-                jct_json['silent'] = silent
-            return isamAppliance.invoke_post(
-                "Creating a standard or virtual junction",
-                "{0}/{1}/junctions".format(uri, reverseproxy_id), jct_json,
-                requires_modules=requires_modules,
-                requires_version=requires_version, warnings=warnings)
+        # Create a simple json with just the main junction attributes
+        jct_json = {
+            "junction_point": junction_point,
+            "junction_type": junction_type,
+            "server_hostname": server_hostname,
+            "server_port": server_port,
+            "force": force
+        }
+        # Add attributes that have been supplied... otherwise skip them.
+        if junction_hard_limit is not None:
+            jct_json["junction_hard_limit"] = junction_hard_limit
+        if junction_soft_limit is not None:
+            jct_json["junction_soft_limit"] = junction_soft_limit
+        if basic_auth_mode is not None:
+            jct_json["basic_auth_mode"] = basic_auth_mode
+        if tfim_sso is not None:
+            jct_json["tfim_sso"] = tfim_sso
+        if remote_http_header is not None:
+            jct_json["remote_http_header"] = remote_http_header
+        if stateful_junction is not None:
+            jct_json["stateful_junction"] = stateful_junction
+        if not isVirtualJunction and preserve_cookie:
+            jct_json["preserve_cookie"] = preserve_cookie
+        if not isVirtualJunction and cookie_include_path:
+            jct_json["cookie_include_path"] = cookie_include_path
+        if not isVirtualJunction and transparent_path_junction:
+            jct_json["transparent_path_junction"] = transparent_path_junction
+        if mutual_auth is not None:
+            jct_json["mutual_auth"] = mutual_auth
+        if insert_ltpa_cookies is not None:
+            jct_json["insert_ltpa_cookies"] = insert_ltpa_cookies
+        if insert_session_cookies is not None:
+            jct_json["insert_session_cookies"] = insert_session_cookies
+        if request_encoding is not None:
+            jct_json["request_encoding"] = request_encoding
+        if enable_basic_auth is not None:
+            jct_json["enable_basic_auth"] = enable_basic_auth
+        if key_label is not None:
+            jct_json["key_label"] = key_label
+        if gso_resource_group is not None:
+            jct_json["gso_resource_group"] = gso_resource_group
+        if junction_cookie_javascript_block is not None and junction_cookie_javascript_block != '':
+            jct_json["junction_cookie_javascript_block"] = junction_cookie_javascript_block
+        if client_ip_http is not None:
+            jct_json["client_ip_http"] = client_ip_http
+        if version_two_cookies is not None:
+            jct_json["version_two_cookies"] = version_two_cookies
+        if ltpa_keyfile is not None:
+            jct_json["ltpa_keyfile"] = ltpa_keyfile
+        if authz_rules is not None:
+            jct_json["authz_rules"] = authz_rules
+        if fsso_config_file is not None:
+            jct_json["fsso_config_file"] = fsso_config_file
+        if username is not None:
+            jct_json["username"] = username
+        if password is not None:
+            jct_json["password"] = password
+        if server_uuid is not None:
+            jct_json["server_uuid"] = server_uuid
+        if virtual_hostname is not None:
+            jct_json["virtual_hostname"] = virtual_hostname
+        if server_dn is not None:
+            jct_json["server_dn"] = server_dn
+        if local_ip is not None:
+            jct_json["local_ip"] = local_ip
+        if query_contents is not None:
+            jct_json["query_contents"] = query_contents
+        if case_sensitive_url is not None:
+            jct_json["case_sensitive_url"] = case_sensitive_url
+        if windows_style_url is not None:
+            jct_json["windows_style_url"] = windows_style_url
+        if ltpa_keyfile_password is not None:
+            jct_json["ltpa_keyfile_password"] = ltpa_keyfile_password
+        if https_port is not None:
+            jct_json["https_port"] = https_port
+        if http_port is not None:
+            jct_json["http_port"] = http_port
+        if proxy_hostname is not None:
+            jct_json["proxy_hostname"] = proxy_hostname
+        if proxy_port is not None:
+            jct_json["proxy_port"] = proxy_port
+        if isVirtualJunction and sms_environment is not None:
+            jct_json["sms_environment"] = sms_environment
+        if isVirtualJunction and vhost_label is not None:
+            jct_json["vhost_label"] = vhost_label
+        if delegation_support is not None:
+            jct_json["delegation_support"] = delegation_support
+        if scripting_support is not None:
+            jct_json["scripting_support"] = scripting_support
+        if http2_junction is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, http2_junction: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring http2_junction for this call.".format(
+                        isamAppliance.facts["version"], http2_junction))
+            else:
+                jct_json["http2_junction"] = http2_junction
+        if http2_proxy is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, http2_proxy: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring http2_proxy for this call.".format(
+                        isamAppliance.facts["version"], http2_proxy))
+            else:
+                jct_json['http2_proxy'] = http2_proxy
+        if sni_name is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.4.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, sni_name: {1} is not supported. Needs 9.0.4.0 or higher. Ignoring sni_name for this call.".format(
+                        isamAppliance.facts["version"], sni_name))
+            else:
+                jct_json['sni_name'] = sni_name
+        if description is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "9.0.7.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, description: {1} is not supported. Needs 9.0.7.0 or higher. Ignoring description for this call.".format(
+                        isamAppliance.facts["version"], description))
+            else:
+                jct_json['description'] = description
+        if priority is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "10.0.2.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, priority: {1} is not supported. Needs 10.0.2.0 or higher. Ignoring priority for this call.".format(
+                        isamAppliance.facts["version"], priority))
+            else:
+                jct_json['priority'] = priority
+        if server_cn is not None:
+            if tools.version_compare(isamAppliance.facts["version"], "10.0.2.0") < 0:
+                warnings.append(
+                    "Appliance at version: {0}, server_cn: {1} is not supported. Needs 10.0.2.0 or higher. Ignoring server_cn for this call.".format(
+                        isamAppliance.facts["version"], server_cn))
+            else:
+                jct_json['server_cn'] = server_cn
+        if isVirtualJunction and silent:
+            jct_json['silent'] = silent
+        return isamAppliance.invoke_post(
+            "Creating a standard or virtual junction",
+            "{0}/{1}/junctions".format(uri, reverseproxy_id), jct_json,
+            requires_modules=requires_modules,
+            requires_version=requires_version, warnings=warnings)
 
     return isamAppliance.create_return_object(warnings=warnings)
 

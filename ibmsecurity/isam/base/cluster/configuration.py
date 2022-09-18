@@ -105,14 +105,18 @@ def set(isamAppliance, primary_master='127.0.0.1', secondary_master=None, master
         cluster_json["hvdb_solid_tc"] = hvdb_solid_tc
     if hvdb_db_truststore is not None and hvdb_db_truststore != "":
         cluster_json["hvdb_db_truststore"] = hvdb_db_truststore
-    if hvdb_failover_servers is not None:
-        #Only if the db_type is Postgresql.  This is an array [{"address": "postgresql2.domain.com", "port": 5432, "order": 0}]
-        if hvdb_db_type is not None and hvdb_db_type == "postgresql":
-            cluster_json["hvdb_failover_servers"] = hvdb_failover_servers
-    if cfgdb_failover_servers is not None:
-        #Only if the dbtype isPostgresql.  This is an array [{"address": "postgresql2.domain.com", "port": 5432, "order": 0}]
-        if cfgdb_db_type is not None and cfgdb_db_type == "postgresql":
-            cluster_json["cfgdb_failover_servers"] = cfgdb_failover_servers
+    if (
+        hvdb_failover_servers is not None
+        and hvdb_db_type is not None
+        and hvdb_db_type == "postgresql"
+    ):
+        cluster_json["hvdb_failover_servers"] = hvdb_failover_servers
+    if (
+        cfgdb_failover_servers is not None
+        and cfgdb_db_type is not None
+        and cfgdb_db_type == "postgresql"
+    ):
+        cluster_json["cfgdb_failover_servers"] = cfgdb_failover_servers
     if cfgdb_db_type is not None:
         cluster_json["cfgdb_db_type"] = cfgdb_db_type
     if cfgdb_address is not None:
@@ -179,10 +183,8 @@ def _check(isamAppliance, cluster_json, ignore_password_for_idempotency):
     :return:
     """
 
-    check_obj = {'value': True, 'warnings':""}
-
     ret_obj = get(isamAppliance)
-    check_obj['warnings'] = ret_obj['warnings']
+    check_obj = {'value': True, 'warnings': ret_obj['warnings']}
     sorted_ret_obj = tools.json_sort(ret_obj['data'])
     sorted_json_data = tools.json_sort(cluster_json)
     logger.debug("Sorted Existing Data:{0}".format(sorted_ret_obj))
@@ -191,7 +193,7 @@ def _check(isamAppliance, cluster_json, ignore_password_for_idempotency):
     if ignore_password_for_idempotency:
         temp = copy.deepcopy(
             cluster_json)  # deep copy neccessary: otherwise password parameter would be removed from desired config dict 'cluster_json'. Comparison is done with temp<>ret_obj object
-        for idx, x in enumerate(cluster_json):
+        for x in cluster_json:
             if "password" in x:
                 logger.debug("Ignoring JSON password entry: '{0}' to satisfy idempotency.".format(x))
                 del temp[x]
@@ -208,12 +210,11 @@ def _check(isamAppliance, cluster_json, ignore_password_for_idempotency):
                         "For key: {0}, values: {1} and {2} do not match.".format(key, value, ret_obj['data'][key]))
                     check_obj['value']=False
                     return check_obj
-            else:
-                if ret_obj['data'][key] != value:
-                    logger.debug(
-                        "For key: {0}, values: {1} and {2} do not match.".format(key, value, ret_obj['data'][key]))
-                    check_obj['value']=False
-                    return check_obj
+            elif ret_obj['data'][key] != value:
+                logger.debug(
+                    "For key: {0}, values: {1} and {2} do not match.".format(key, value, ret_obj['data'][key]))
+                check_obj['value']=False
+                return check_obj
         except:  # In case there is an error looking up the key in existing configuration (missing)
             logger.debug("Exception processing Key: {0} Value: {1} - missing key in current config?".format(key, value))
             check_obj['value']=False

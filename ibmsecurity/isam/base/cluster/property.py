@@ -57,11 +57,7 @@ def _check(isamAppliance, id, value=None):
 
     if ret_obj is None:
         return False
-    else:
-        if value is not None and value != ret_obj['data']['value']:
-            return False
-
-    return True
+    return value is None or value == ret_obj['data']['value']
 
 
 def delete(isamAppliance, id, check_mode=False, force=False):

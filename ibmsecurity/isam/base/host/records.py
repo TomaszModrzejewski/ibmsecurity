@@ -44,11 +44,11 @@ def set(isamAppliance, addr, hostnames, check_mode=False, force=False):
         else:
             add_required = True
 
-    if force is True or delete_required is True:
+    if force is True or delete_required:
         # No need to check if record exists - force delete
         delete(isamAppliance, host_address=addr, check_mode=check_mode, force=True)
 
-    if force is True or add_required is True:
+    if force is True or add_required:
         # No need to check for add - force add
         return add(isamAppliance, addr=addr, hostnames=hostnames, check_mode=check_mode, force=True)
 
@@ -99,11 +99,7 @@ def _check(isamAppliance, addr, check_mode=False, force=False):
     """
     ret_obj = get_all(isamAppliance)
 
-    for hosts in ret_obj['data']:
-        if hosts['addr'] == addr:
-            return True
-
-    return False
+    return any(hosts['addr'] == addr for hosts in ret_obj['data'])
 
 
 def compare(isamAppliance1, isamAppliance2):
